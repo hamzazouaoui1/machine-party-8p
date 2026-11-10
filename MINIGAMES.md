@@ -19,7 +19,7 @@ Cross-file conventions: **pitfall N** always means `PITFALLS.md`;
 
 ## What the mod changes
 
-56 files today; the authoritative count and file list is the overlay manifest
+57 files today; the authoritative count and file list is the overlay manifest
 in `UPDATING.md` (CI checks it). Re-apply all of these to the new version.
 
 ### 1. `modules/multiplayer/network_manager.gd`
@@ -300,10 +300,17 @@ row scale (1.0) and the container set are restored to exactly the shipped
 values, and the spare rows are hidden and emptied. Confirmed by the `[SCORE8]`
 trace reading `rows=4 scale=1.000 expanded=false`.
 
-The eight rows are resampled across the span the four originals covered rather
-than extended downward (which would run off the screen panel), so the row pitch
-halves and rows are scaled by the same ratio, `MOD_ROW_SCALE = 3/7`. Raise that
-constant for larger text at the cost of tighter gaps.
+**One row per player above four** (since 2026-11-09; until then every 5-8
+roster got the eight-row board, i.e. the smallest text for the lobbies that
+needed it least, plus blank placeholder rows). The rows are resampled across the
+span the four originals covered rather than extended downward (which would run
+off the screen panel), so the row pitch shrinks by `3/(rows-1)` and
+`_mod_row_scale()` scales the rows by the same ratio to keep the shipped
+gap-to-row proportion: 0.75 at five players, 0.6 at six, 0.5 at seven, 3/7 at
+eight. Clones the roster does not need stay parked - hidden, emptied and out of
+`user_container_array`, so nothing sorts against them. The briefing screen
+(section 12) deliberately keeps eight cards: its empty cards are the invite
+buttons. `[SCORE8]` reads `players=5 rows=5 scale=0.750` on host and clients.
 
 **No RPC is needed.** `setup()` is already invoked on every peer by
 `intermission_manager.show_score_screen_rpc`, and the score dictionaries it
@@ -482,19 +489,100 @@ new seat against this before trusting a screenshot.
 
 ### 15. `minigames/junk_platform/scripts/junk_platform.gd`
 
-Diagnostic only - the `[PLATFORM]` trace. No gameplay change at any roster size.
+**A platform per player above four** - a ring of six or eight platforms built
+at runtime on every peer. Until 2026-11-09 this section read "diagnostic only":
+the mod seated two players on each of the four shipped decks and called it
+"fine because scoring is last-man-standing". It was not fine, and the reason is
+in a file the mod never opened: `junk_handler.gd` drops one piece of debris per
+**player spawn point** per tick (`for p in spawn_points.values()`), so a shared
+deck took debris at **twice** the vanilla rate against the same collapse
+threshold (`collapse_after = 3`, set in the platform sub-scene), and its two
+players died together when it went. At five or seven players it was also
+lopsided - one pair doubled up while the rest played the vanilla game. Reported
+by players as "it doubles the debris, which breaks the game".
 
-**Debris Platforms layout notes (verified 2026-08-01).** The four shipped
-markers sit exactly on the four Platform centres, and a platform deck is a
-`CylinderShape3D` of radius **6.0**. `spawn_expand.py` clones each marker 1.2u
-along its local X, so an added slot shares a deck with an original: worst
-measured landing **1.56u** from a centre, well inside the radius. Two players
-per deck is the resulting layout - fine because scoring is last-man-standing, so
-nothing assumes one player per platform. `spawn_players()` indexes
-`player_spawn_position_node.get_child(i)` rather than a parallel array, and
-neither `MultiplayerSpawner` in the scene sets `spawn_limit`, so pitfalls 11 and
-13 both come out clean here. Camera facing is derived from `position.z < 0`,
-which the clones inherit: the 8-player split is 4/4, as vanilla is 2/2.
+**What a platform is.** Four separate things tied together only by the
+platform's exported references, which is why adding one is not a single clone:
+
+| Part | Node | Notes |
+|---|---|---|
+| Logic + collider | `Platform1`-`4`, instances of `junk_platform_platform.tscn` at the scene root | `Area3D`; the deck you stand on is an invisible `CSGCylinder3D` inside it, radius 6.0, height 105.5 - a solid pillar, not a disc |
+| Art | `visuals base/junk platform visuals2/platform main parentN` and `visuals base/damage indicators/damage indicator parentN` | pillar mesh, and eight concentric indicator rings lying on the deck |
+| Press | `junk platform compactors/compactorN` | hangs at y ~26.8, slams to 1.355; carries the kill area and its own collider |
+| Alarm | `speaker_indicator alarmN` at the scene root | positional audio |
+
+**The flip.** Players on the far row (`position.z < 0`) get the camera *and*
+`visuals base` turned 180 degrees, so the art that stands at their platform is
+the art authored for the diagonally opposite one. That is what
+`platform_visuals_flipped` / `damage_circle_parent_flipped` are for, and it
+means **every platform needs a mirror partner through the origin**. The ring is
+therefore built in mirror pairs, and a clone's flipped set is its partner's art.
+Presses and platforms are not under `visuals base` and never turn
+(`assign_flipped_compactor()` returns on its first line).
+
+**The layout** (`zz_mod_build_ring_rpc`, sent by the host from `spawn_players()`
+and run on every peer): the four shipped corners slide from 13 to
+`MOD_RING_SPACING` = **15.5**, and the mid-edges are filled in mirror pairs -
+`(-S, 0)` and `(S, 0)` for 5-6 players (six platforms), plus `(0, -S)` and
+`(0, S)` for 7-8 (eight). The spare deck at five and seven players is just an
+empty platform, as vanilla has with two or three. Why the corners move rather
+than the extras squeezing in between them, all measured from the scene:
+
+| Constraint | Number | Consequence |
+|---|---|---|
+| Deck radius 6.0, character capsule radius 0.7, **no jump** in this minigame (`junk_platform_player.gd` has gravity and `move_speed` only) | a gap under ~1.4u can be walked | at the shipped 13.0 a mid-edge deck would sit 1.0u from its neighbours - and a player who can step off a collapsing platform has no game left |
+| Pillar art AABB: 6.68u deep on the far side, **8.62u on the camera side** | two rows need >= 15.3u between centres | 15.5 clears it by 0.2u |
+| Press kill box 13.2 x 13.7, origin up to ~1u off the platform centre | reaches <= 8.8u from a centre | neighbour deck edge is at 9.5u |
+| Camera at (0, 27.1, 30.7), pitched 49.8 degrees down, vertical FOV 50.3 | the frustum meets the deck plane at z = 23.4 | near row's front edge is z = 21.5; a ring any wider starts losing the near decks off the bottom of the screen |
+| Support beams from the side walls end at x = +-18, z = -10.2, ~11u below the decks | - | the moved far corners still cover the beam ends; the side platforms' art stops 3.5u short of them |
+
+World-space moves throughout (`_mod_shift_platform`, `_mod_clone_platform`):
+`platform_visuals` always names the art currently standing at a platform on
+this peer, so shifting or copying what it names is correct whether or not the
+peer has flipped. The platform itself is **instantiated** from its scene, not
+`duplicate()`d (pitfall 20); the press is `duplicate()`d and its four exported
+node references (`visual`, `particle`, `area`, `speaker_slam`) are re-pointed at
+its own children **before** `add_child()`, because `_ready()` connects the kill
+area it finds there (pitfall 37 - an unrebound press slams, sparks and kills on
+the platform it was copied from). `[PLATFORM] clone` prints `rebound=4/4`.
+
+**Spawns and debris.** `_mod_ring_spawns()` rebuilds the host's spawn list from
+the ring: slots 0-3 keep the shipped markers' order and move out with their
+corner, 4-7 follow the mid-edges. The scene's four `_MOD` markers are no longer
+read at any roster size (the `.tscn` is unchanged and still carries them).
+`junk_handler.max_junk` rises from 40 to `MOD_JUNK_PER_PLAYER` (10) x roster:
+the pool is a ceiling that a four-player round rarely reaches, but eight
+streams exhaust 40 within seconds and then every stream starves.
+
+**A collapsed platform clears itself away in a ring round.** Vanilla leaves the
+press standing where it landed, a 23u-tall block. With four corners that is
+harmless because the camera looks down the open middle of the level; in the
+ring the near-middle press stands between the camera and the far-middle
+platform and hides whoever is alive on it, and a near-corner press covers half
+of the side platform behind it - **reported from the first 8-player run, and
+invisible to every trace** (pitfall 39). So `_mod_clear_collapsed_platform()`
+waits `MOD_PRESS_HOLD` (1.0 s), lifts the press back to the height recorded
+before it moved, drops the platform's art 70u into the pit and hides it,
+disables the pillar collider (found by type, pitfall 38) and wakes the debris
+resting on it so it falls to the catcher and returns to the pool. It hangs off
+`visibility_changed`: `collapse_rpc()` hides the platform on every peer and
+nothing else ever does, so that signal is "this platform just died" without
+adding the platform script to the overlay.
+
+**Rule 3.** Everything above is behind `player_count > 4` on the host and
+reaches clients only through the RPC, which is never sent at four or fewer; the
+`.tscn` is untouched. At four players `[PLATFORM]` shows no `ring` line and the
+shipped `Marker3D`-`Marker3D4` at +-13.
+
+**Verified 2026-11-09 by trace** on host and every client - 8 players: `ring
+asked=8 platforms=8 cloned=4`, each of eight players `ON_DECK dist=0.00` on a
+distinct platform, three rounds, `cleared` 24 times per peer with
+`colliders=1`; 5 players: `asked=6 platforms=6 cloned=2`; 4 players: no ring,
+shipped markers. **Placement and the self-clearing collapse were watched in the
+8-window harness and confirmed by eye the same day** - the far-middle player
+stays visible once the near-middle press has lifted - **but neither has been
+played by a full lobby.** The evidence tables are in the 2026-11-09
+session-log entry.
 
 ### 16. `train_race.gd`, `spine_breaker.gd`, `dvd_roomba.gd`
 
@@ -1149,7 +1237,7 @@ These exist because screenshots repeatedly proved unreliable. Prefer them.
 | `[ORIGINAL]` | `multiplayer_menu.gd` | confirms `-original` flipped the session to the **non-custom** playlist branch |
 | `[FLOW]` | `intermission_briefing_screen.gd` | auto-ready under `FLOW=1`, one line per peer |
 | `[SMOKE8]` | `smoke_break.gd`, `smoke_break_trolley.gd` | crate reveal, seats eliminated, and per-shot aim + decal range |
-| `[PLATFORM]` | `junk_platform.gd` | per-slot spawn assignment, then a per-peer audit of where every player actually landed with `ON_DECK`/`OFF_DECK` against the 6.0 platform radius |
+| `[PLATFORM]` | `junk_platform.gd` | per-slot spawn assignment (`marker=ring` above four players), then a per-peer audit of where every player actually landed with `ON_DECK`/`OFF_DECK` against the 6.0 platform radius and **which platform** - two players reporting the same `platform=` is the shared-deck bug. Above four players also `clone` (one per added platform, with `rebound=4/4`), `ring` (`asked` / `platforms` / `cloned`, per peer) and `cleared` (one per collapsed platform per peer, `colliders=1`). No `ring` line at four players is the pass |
 | `[SCORE8]` | `intermission_score_screen.gd` | `is_server`, roster size, **rows**, row scale, `expanded` |
 | `[BRIEF8]` | `intermission_briefing_screen.gd` | same, plus the learned invite-button offset ratios |
 | `[DUCK8]` | `duck_hunt.gd`, `hunter_player.gd` | markers before/after with every x and an `outside_gate` count; `spawned` — the duck nodes that actually exist plus the hunter, per peer, named, with an `expected_ducks` cross-check; plus the hunter's `ducks`/`magazine`/`cycle` and the bolt animation's `bolt_len`/`bolt_window`/`bolt_speed`, per peer. `added=0` and `bolt_speed=1.000` at <= 4 players are the vanilla-parity gates |
@@ -1603,3 +1691,137 @@ across the eleven affected minigames and smoke_break — leaver noticed within
 ~0.7 s, no `Empty → Finished`, then the healthy start on host and clients —
 plus kill-at-load regressions on the two `.get()` files and no-kill controls
 at 4 and 8; evidence tables in the second archived 2026-08-15 session-log entry.
+
+### 24. Roster-scaled scoring - `game.gd`, `globals.gd`, five elimination scripts
+
+**Reported by players 2026-11-09 as "the points don't seem accurate" and "some
+games pay far more".** Scoring was open item 1 - never played at 8 - and this
+is what playing it found.
+
+**The mechanism.** Every minigame hands the host a `player_scores` dictionary
+of small raw integers through `player_scores_finalized`, and `game.gd`
+multiplies by `score_multiplier` (**85**, read from `game.scn`). The
+survival-order minigames build theirs as
+
+```gdscript
+for i in dead_players.size():
+    player_scores[dead_players[i]] = i          # 0, 1, 2 ... in death order
+for network_id in active_players.keys():
+    player_scores[network_id] = player_count    # the winner
+```
+
+so the payout **is the roster size**: 0 / 85 / 170 and 340 for the winner at
+four players, but 0 ... 510 and **680** at eight. The task-scored minigames
+do not move - Table Manners tops out at 3 raw (255) at any roster - so at eight
+players dying fifth in Lethal Rebound (4 raw) out-earned winning Table Manners,
+and totals ran past the score screen's four digits.
+
+**The fix** is one multiplication, in `_on_minigame_player_score_finalized()`:
+`Globals.mod_score_scale(identifier, roster)` returns `4 / roster` for the
+minigames in `Globals.mod_roster_scored_minigames` above four players and 1.0
+otherwise, which maps 0..N back onto vanilla's 0..4. `roster` is the minigame's
+own `player_count` - the roster the round started with, and the number it gives
+the winner - so a mid-round disconnect does not rescale everybody else. When
+the scale is 1.0 the vanilla integer line runs untouched, so 1-4 player lobbies
+and every unlisted minigame score exactly as the unmodded game.
+
+| Roster | Raw -> points (x85) |
+|---|---|
+| 4 (vanilla) | 0, 85, 170 - winner 340 |
+| 5 | 0, 68, 136, 204 - winner 340 |
+| 6 | 0, 57, 113, 170, 227 - winner 340 |
+| 7 | 0, 49, 97, 146, 194, 243 - winner 340 |
+| 8 | 0, 43, 85, 128, 170, 213, 255 - winner 340 |
+
+**In the list:** `DvdRoomba`, `SpineBreaker`, `DiscoDodge`, `JunkPlatform`,
+`TrainRace` (index-scored as above); `ForkliftCertified`, `BurnRecycle`,
+`ChiselGauntlet` (same 0..N range by other routes - `dead_players.size()` at
+removal, the batch index of section 21, `player_count - players_alive.size()`);
+and `EscalatorPit`, whose *finalized* dictionary is +1 per rival outlived and so
+also runs 0..N (its finish bonuses go through `player_scored`, which is not
+scaled).
+
+**Deliberately not in the list**, each for a reason that should be re-checked
+rather than assumed if these files change:
+
+- `DuckHunt` - `MinigameRoundsByPlayerCount` already drops it from two outer
+  rounds to one above four players, which holds its payout level: 22 raw
+  attainable at eight (hunter 8, plus 7 duck turns at 2) against 20 at four
+  (two rounds of 4 + 3x2).
+- `ManufactureGun`, `KnifeAtTheOffice` - they pay per kill or infection. The
+  *most* one player can take grows with the roster, but the kills available
+  per player do not, so the average payout is flat.
+- `GreenPea`, `ExplodingCollarRace`, `SmokeBreak` - fixed per-player task
+  points.
+
+**Same-moment deaths share a placement.** Vanilla ranks two players killed by
+the same train a full raw point apart, in whatever order the signals arrived.
+The five index-scored scripts now record `Time.get_ticks_msec()` per death
+(`mod_death_msec`) and, above four players, call
+`Globals.mod_share_tied_placements()`, which gives every death within
+`MOD_TIE_WINDOW_MSEC` (350) of the previous one the **best** index in its
+group - the same "ties resolve upward" rule The Filter applies to its per-room
+batches (section 21). A death with no recorded time (a disconnect) is never
+tied. Forklift Certified and Chisel Gauntlet already score a simultaneous
+batch equally (downward) in vanilla and are left alone. **Upward has a
+degenerate end:** a whole lobby wiped by one event all score the top dead
+index - an idle 8-player Tunnel Hazard, where the first train takes seven at
+once, awards seven players 255 each (measured 2026-11-09). In real play a tie
+is usually two or three players and co-survivors of a final collapse arguably
+should score high, which is why upward was chosen; averaging each group's
+indices would instead preserve exactly the pool vanilla hands out, at the cost
+of carrying half-points through `player_scores` (typed `int` in every script).
+Revisit if real sessions show wipes paying too well.
+
+**Verified 2026-11-09** with a temporary host-side trace that printed each
+finalized dictionary and the points awarded - built into the test pck from a
+side overlay and **not in `mod/`** (the session-log entry has the lines):
+`roster=4 scale=1.000` awarding 0/85/170/340; `roster=5 scale=0.800` awarding
+68/136/204/340; `roster=8 scale=0.500` awarding 85/128/170/213/255/340, with
+tied groups sharing a value. Idle instances, so what is exercised is death
+order and the arithmetic, not skill play.
+
+### 25. End-of-session results - `intermission_session_end.gd`
+
+Joined the overlay 2026-11-09 (56 -> 57 files). Vanilla's
+`send_session_end_data_host()` collects the final ranking with `for i in 5:` -
+ranks 0..4 - so in a 5-8 player session the results screen named the winner
+and three "failed" subjects and silently dropped everyone who finished fifth
+or lower. The score screen was widened in v1.0 (section 11); this, its only
+consumer, was not.
+
+**Sending all seven non-winners is not the fix - it is a crash.** The screen
+is a fixed stack: `lines` holds eight rows plus four inline labels (twelve),
+and `show_subject_entry()` gives the failed list rows 4-6, then pads with
+
+```gdscript
+for j in 10:
+    line_index += 1
+    add_text(" ")
+    if line_index == 8:
+        break
+```
+
+which only stops when `line_index` is **exactly** 8. A fourth name leaves it at
+8 before the loop, the loop counts on to `lines[12]`, and a method call past
+the end of a typed array takes the process down in the release build
+(pitfall 23). Vanilla's `for i in 5` is, by accident or design, what keeps the
+list at three.
+
+So the override does two things: the rank walk becomes `range(1, 9)` (ranks
+start at 1, so this is identical whenever only ranks 1-4 exist), and
+`_mod_name_rows()` packs more than three names into the same three rows -
+two per row for four to six names, three for seven - clipping each to
+`MOD_NAME_CHARS` (10) the way the score screen clips. Three names or fewer
+pass through untouched, so a 1-4 player session prints what vanilla prints.
+
+The file is derived from the shipped `.gdc` (identical token stream,
+whitespace differs from a GDRE decompile); on a game update re-derive it from
+the new decompile like any other overlay file.
+
+**Verified 2026-11-09** at 8 players with a temporary trace (not in `mod/`):
+every peer received `winner=P2` and seven losers, printed
+`rows=["P3, P1, P4", "P6, P8, P5", "P7"]`, and reached
+`exit_session_after_end` - the sequence ran to its end on host and all seven
+clients. **Whether three names fit the row's width with long Steam names has
+not been looked at**; the harness names are `P1`-`P8`.

@@ -260,18 +260,29 @@ is in git, `<old mod>` is just `git show <last-release-tag>:mod/$f`.
 
 ## Current status (read this first)
 
-**v1.5 (2026-08-16) is the current mod release, built against game v2.1.2.**
+**v1.6-fork (2026-11-09) is the current mod release, built against game
+v2.1.2.** It is a fork of upstream's v1.5 (2026-08-16, still upstream's latest
+on 2026-11-09) and carries its own wire label, `8P-v1.6-fork`, so it and any
+upstream build refuse each other rather than desync - it adds an RPC and
+changes host-side scoring. What it changed, from the first reports by people
+who actually played 5-8 player sessions: survival-order minigames pay on the
+4-player scale above four players (§24), Debris Platforms gives every player
+a platform of their own (§15), the score screen shows one row per player (§11)
+and the end-of-session results list everyone (§25).
 All fifteen rotation minigames are verified at 8 players on the host *and* on
 clients with **positive trace counts** (not absence-of-errors), and each has
 been watched at 8 by a person. Nothing reachable is capped:
 `modded_minigame_player_cap` holds only `ScavangerChairs`, which is in neither
 playlist. The lobby carries 8 seats, 8 character previews and a text roster of
 Steam names (§6, §7); the intermission score screen and the pre-minigame
-briefing screen both show 8 rows at 8 players and 4 at 4 (§11, §12).
+briefing screen both show 8 rows at 8 players and 4 at 4 (§11, §12); the score
+screen shows exactly one row per player in between.
 **"Verified" means 8 players spawn correctly, the layout is right on clients,
-and runs are error-free.** The instances idle — nobody plays — so scoring,
-elimination order and win conditions at 8 remain unproven **everywhere**; that
-is open item 1 and nothing above closes it.
+and runs are error-free.** The instances idle — nobody plays — so elimination
+order and win conditions at 8 remain unproven by the harness **everywhere**;
+that is open item 1. Real 5-8 player sessions have now been played (reported
+2026-11-09) and found two things no trace could: the roster-sized payouts (§24)
+and Debris Platforms' doubled debris (§15).
 
 Per minigame. The **identifier** is what `MINIGAME=` takes (Testing) and what
 code uses; `MinigameReadableNames` in `autoloads/globals.gd` is the only
@@ -285,7 +296,7 @@ confused in this file: **Wrong Way is `EscalatorPit`, Stable Footing is
 | MINEFIELD | `ExplodingCollarRace` | 8 spawns, full rounds played to completion; `blood_trail.gd` empty-`Curve3D` guard | 10 |
 | TABLE MANNERS | `GreenPea` | runtime 8-seat layout by RPC: 8 chairs, widened camera | 10 |
 | CHISEL GAUNTLET | `ChiselGauntlet` | 8 stations with 8 distinct facings, execution device sweeps all eight, consoles/desks cloned; head-on jumbotron HUD above four | 5, 10 |
-| DEBRIS PLATFORMS | `JunkPlatform` | 8 markers, two players per deck, full round at 8 with zero errors | 15 |
+| DEBRIS PLATFORMS | `JunkPlatform` | **a platform per player above four** since 2026-11-09: runtime ring of 6 (5-6 players) or 8 (7-8) platforms by RPC, corners moved out to 15.5, one debris stream each, collapsed platforms clear themselves away. Was two players per deck, which doubled the debris on it | 15 |
 | STABLE FOOTING | `DiscoDodge` | `spawn_limit` 4→8 (measured inert either way); `[DISCO8] spawned=8` on host and all seven clients | 10 |
 | SMOKE BREAK | `SmokeBreak` | 8 hand-authored seats plus two crates, gun retargeted for all eight, four seat-capped arrays fixed; some model clipping on the left four accepted | 14 |
 | WRONG WAY | `EscalatorPit` | 8 stair strips (two per trough), 8 CRT screens, 8 input arrows; handrails and divider posts hidden, floor lowered slightly — vanilla placement, only count and lateral spacing modded | 13 |
@@ -374,11 +385,14 @@ the session-log archive has them.**
    It moves players in fourteen verified scenes, so it wants a decision and a
    look.
 
-1. **Nobody has ever *played* an 8-player session.** The harness runs eight
-   unattended instances, so scoring, elimination order and win conditions at 8
-   are unproven **everywhere** — the single largest gap, and structural: closing
-   it needs in-game bots or input injection, neither of which exists, and a
-   human can drive exactly one window. Duck Hunt is the sharpest consequence, as
+1. **The harness cannot *play* an 8-player session.** It runs eight
+   unattended instances, so elimination order and win conditions at 8 are
+   unproven by it **everywhere** — the single largest gap, and structural:
+   closing it needs in-game bots or input injection, neither of which exists,
+   and a human can drive exactly one window. Real lobbies of varying size were
+   played before 2026-11-09 and their reports are what §15 and §24 fix; treat
+   every "verified at 8" in this file as *spawns and layout*, and expect the
+   next real session to find the next thing. Duck Hunt is the sharpest consequence, as
    it cannot complete unattended at all — a harness limit, not a mod defect; see
    Testing, "What the local test still is not".
 
@@ -469,7 +483,7 @@ python3 tools/checks/preflight_format_specifiers.py
 ```
 extracted/   pristine unpack of the shipped .pck (reference; regenerate on update)
 project/     full decompile via GDRE Tools — readable .gd / .tscn source
-mod/         the overlay: ONLY the 56 files that differ (see the manifest)
+mod/         the overlay: ONLY the 57 files that differ (see the manifest)
 dist/        built "Machine Party.pck" + machine-party-8p-mod.zip (release zip)
 installer/   install.py, install.sh, WindowsInstall.bat, README.txt - the
               installer scripts, no mod copy inside; install.py falls back to
@@ -540,7 +554,11 @@ deleted during the 2026-08-14 v2.1.2 rebuild; the v1.0.6 generation before that.
   the "nothing to displace" compatibility check — without it that warning fired
   on every install because of `mod_player_name_list.gd`, training users to
   ignore the one message meant to stop a bad patch. Keep it in sync with the
-  overlay. `find_game()` checks the Windows registry only when the ordinary
+  overlay. On macOS there is no native build to find (Steam lists Windows and
+  Linux only), so `mac_bottle_steam_dirs()` adds the Steam clients inside
+  CrossOver and Whisky bottles, where Mac players run the Windows build —
+  exercised 2026-11-09 against a simulated home folder only, never on a real
+  Mac. `find_game()` checks the Windows registry only when the ordinary
   paths find nothing — a deliberate choice to keep the installer's trust surface
   small (2026-08-18 session-log entry), not an accident of control flow, so
   don't collapse the two passes into one.
@@ -567,18 +585,18 @@ mod needs **no Godot export templates and no editor round-trip**.
 
 ## Overlay manifest — every file in `mod/`, and what documents it
 
-**56 files: 40 `.gd`, 16 `.tscn`.** Regenerate with `find mod -type f | sort`.
+**57 files: 41 `.gd`, 16 `.tscn`.** Regenerate with `find mod -type f | sort`.
 On a game update, every one of these must be re-derived from the *new* source —
 see step 5 of the update procedure. The "§" column is the section of
 **`MINIGAMES.md`** that explains the change.
 
 | File | § | Change |
 |---|---|---|
-| `autoloads/globals.gd` | 2 | version strings (display + the two wire fields), 3 suit colours + tints, player caps, `supports_player_count()`, round counts. `default_playlist` is byte-identical to vanilla again since 2026-08-09 |
+| `autoloads/globals.gd` | 2, 24 | version strings (display + the two wire fields), 3 suit colours + tints, player caps, `supports_player_count()`, round counts, **`mod_roster_scored_minigames` + `mod_score_scale()` + `mod_share_tied_placements()`**. `default_playlist` is byte-identical to vanilla again since 2026-08-09 |
 | `modules/multiplayer/network_manager.gd` | 1 | `MAX_PLAYERS` 4→8; `-localtest` backend; `mod_all_peers_modded()` |
 | `modules/multiplayer/backends/steam_backend.gd`, `backends/enet_backend.gd` | — | **vanilla-compat handshake**: wire version + `mod8p` capability key, vanilla-peer accept, over-cap refusal and spectator demotion. See the archived 2026-08-09 session-log entry |
 | `scenes/local_game/script/local_game.gd` | — | couch mode's own playlist generator — the **unconditional** cutscene filter (no vanilla peers by definition); see "The first sanctioned exception" |
-| `scripts/scenes/game/game.gd` | 3, 19 | playlist filtering + fallback, **Arcade-branch cap filter + clamp (v1.5.0)**, **all-modded-only cutscene filter**, `-minigame` pin, round-count resolution, `[ROUNDS8] load`, **load-gate re-check on peer disconnect (pitfall 32, 2026-08-15)** |
+| `scripts/scenes/game/game.gd` | 3, 19, 24 | **roster-scaled payout in `_on_minigame_player_score_finalized()`**, playlist filtering + fallback, **Arcade-branch cap filter + clamp (v1.5.0)**, **all-modded-only cutscene filter**, `-minigame` pin, round-count resolution, `[ROUNDS8] load`, **load-gate re-check on peer disconnect (pitfall 32, 2026-08-15)** |
 | `scripts/scenes/game/states/minigame_playing_state.gd` | 19 | the **replay gate** — second round-count site |
 | `scripts/components/character customization/customization_assigner.gd` | 4 | suit tinting |
 | `scenes/bootstrap/scripts/bootstrap.gd` | 8 | `-localtest`, `-fullflow` |
@@ -586,20 +604,22 @@ see step 5 of the update procedure. The "§" column is the section of
 | `modules/multiplayer_lobby/multiplayer_menu.gd` | 6, 8 | debug-lobby seat map, window tiling, `-original` |
 | `modules/multiplayer_lobby/mod_player_name_list.gd` | 7 | **the only file the mod adds** |
 | `modules/multiplayer/backends/multiplayer_backend.gd` | 8 | window titles P1-P8 |
-| `minigames/intermission_new/components/intermission_score_screen.gd` | 11 | 8 rows; reverb pitch clamp |
+| `minigames/intermission_new/components/intermission_score_screen.gd` | 11 | one row per player up to 8; reverb pitch clamp |
+| `minigames/intermission_new/components/intermission_session_end.gd` | 25 | **joined 2026-11-09**: final ranking walks ranks 1-8 instead of 1-4; more than three names packed into the screen's three rows (four would crash it) |
 | `minigames/intermission_new/components/intermission_briefing_screen.gd` | 12 | 8 cards; `FLOW=1` auto-ready |
 | `minigames/chisel_gauntlet_multiplayer/*` (4) | 5, 10, 23 | 8 stations, facings, shotgun order, jumbotron HUD overlay above four, split-screen; the `.tscn` adds 4 identity spectate markers (pitfall 31) |
 | `minigames/escalator_pit/*` (3) | 13, 23 | 8 stair strips, hidden handrails |
 | `minigames/smoke_break/*` (4) | 14, 23 | 8 seats, crates, aim angles, 4 capped arrays |
 | `minigames/green_pea/*` (2) | 10, 23 | runtime 8-seat layout by RPC |
 | `minigames/knife_at_the_office/*` (3) | 17, 23 | search-target clamp, 8 hunt icons |
-| `minigames/spine_breaker/*` (2) | 16, 18, 23 | spawn audit + roster-scaled kill pace |
+| `minigames/spine_breaker/*` (2) | 16, 18, 23, 24 | spawn audit + roster-scaled kill pace; death timestamps for tied placements |
 | `minigames/duck_hunt/*` (2) | 19 | runtime markers, magazine curve, animation fit, **`debug_skip_brief` reveal-skip repair (`can_aim` + overlay)**, **pre-start disconnect guard (pitfall 32)** |
 | `minigames/forklift_certified/*` (2) | 20, 23 | runtime mid-edge delivery zones + markers, crate spawn region and target, blood-decal pool refill |
 | `minigames/burn_recycle/*` (2) | 21, 23 | **two-room layout**, balanced rooms, per-room elimination, tie-corrected scoring |
 | `minigames/manufacture_gun/*` (1) | 22, 23 | **runtime mid-edge spawns + workstations**, wall-desk turn + slide + **wall push (`MOD_WALL_DESK_PUSH`)**, `empty_desk_array` bounds guard, `spawn_limit` raise by property write, roster-scaled ingredients at **`MOD_ITEM_SPREAD` 1.10**, **ingredient projection raised by its own measured height (RPC, all peers)** |
-| `minigames/disco_dodge/*` (2) | 10, 16, 23 | `spawn_limit` 4→8 (inert — see §10), `[DISCO8]` |
-| `minigames/junk_platform/*` (2), `train_race/*` (2), `dvd_roomba/*` (2) | 15, 16, 23 | markers + spawn audits |
+| `minigames/disco_dodge/*` (2) | 10, 16, 23, 24 | `spawn_limit` 4→8 (inert — see §10), `[DISCO8]`; death timestamps for tied placements |
+| `minigames/junk_platform/*` (2) | 15, 23, 24 | **runtime platform ring above four players** (RPC, every peer), ring spawns, roster-scaled debris pool, self-clearing collapsed platforms; death timestamps. The `.tscn` still carries four `_MOD` markers that nothing reads any more |
+| `minigames/train_race/*` (2), `dvd_roomba/*` (2) | 16, 23, 24 | markers + spawn audits; death timestamps for tied placements |
 | `minigames/exploding_collar_race/*` (3) | 10, 23 | `blood_trail.gd` empty-`Curve3D` guard; `exploding_collar_race.gd` joined the overlay 2026-08-15 for the **pre-start disconnect guard** (§23) — its only delta |
 | `minigames/cutscene_test/*`, `cutscene_game_02/*`, `shape_cutter/*`, `memorize_path/*` (4 `.tscn`) | 9 | spawn markers only; unreachable scenes, kept defensively |
 
@@ -931,7 +951,7 @@ In code — these change behaviour, so they are the ones that break things:
     put it on the wire under the `mod8p` key, so it is also what distinguishes a
     modded peer from a vanilla one and from an older mod build.
   - `game_version` → their concatenation, the display string; currently
-    `v2.1.2-8P-v1.5`. A game update bumps only the game part — **carry the mod
+    `v2.1.2-8P-v1.6-fork`. A game update bumps only the game part — **carry the mod
     release label across unchanged** unless the mod itself is being released anew.
 - `installer/install.py` → `SUPPORTED_VERSION = "v<new>"`
 - `installer/install.py` → `verify()`'s printed message **hardcodes the same
@@ -1048,7 +1068,7 @@ cd testgame
 timeout 25 stdbuf -o0 -e0 ./"Machine Party.x86_64" --windowed --resolution 960x540 2>&1 | grep -E "Running version|SCRIPT ERROR|Parse Error"
 ```
 Should print `Running version: v<new>-8P-v<modrelease>` — currently
-`v2.1.2-8P-v1.5` (mod release v1.5, 2026-08-16).
+`v2.1.2-8P-v1.6-fork` (mod release v1.6-fork, 2026-11-09).
 
 ### Eight local clients
 

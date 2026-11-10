@@ -3,8 +3,14 @@ Machine Party - 8 Player Mod
 
 Raises the online player cap from 4 to 8.
 
-Built for Machine Party v2.1.2. Works on Windows, macOS and Linux - it patches
+Built for Machine Party v2.1.2. Works on Windows, Linux and macOS - it patches
 whichever copy of the game you already own.
+
+ON A MAC: Machine Party has no native macOS version on Steam. Mac players run
+the Windows version through CrossOver or Whisky, and the mod works there
+exactly as it does on Windows - the game file it patches is identical on every
+platform. The installer looks inside CrossOver and Whisky bottles on its own;
+see INSTALL below.
 
 
 IMPORTANT
@@ -15,7 +21,7 @@ and unmodded players works automatically, caps at 4 players, and plays the
 plain vanilla rotation. A 5th player trying to join a mixed lobby is refused
 with the game's version-mismatch message rather than the game breaking halfway
 through a session. Two different mod releases always refuse each other, so
-modded friends should update together (e.g. v1.4 and v1.5 cannot connect).
+modded friends should update together (e.g. v1.5 and v1.6-fork cannot connect).
 
 
 INSTALL
@@ -38,12 +44,21 @@ If it cannot find the game, point it at the folder yourself:
 
   python3 install.py --game-dir "C:\...\steamapps\common\party project\Machine Party_Windows"
 
+On a Mac, open Terminal, go to this folder and run  sh install.sh  (macOS
+offers to install Python the first time if it is missing). If the game lives
+in a bottle the installer does not know about, the folder to point it at is
+the Windows game folder inside that bottle, for example:
+
+  python3 install.py --game-dir "$HOME/Library/Application Support/CrossOver/Bottles/<bottle>/drive_c/Program Files (x86)/Steam/steamapps/common/party project/Machine Party_Windows"
+
+Quit the game (and Steam inside the bottle) before installing.
+
 
 DID IT WORK?
 ------------
 Launch the game and look at the version in the corner of the main menu:
 
-  v2.1.2-8P-v1.5    <- mod is active
+  v2.1.2-8P-v1.6-fork    <- mod is active
   v2.1.2            <- still the original
 
 Or check without launching:
@@ -78,7 +93,18 @@ WHAT CHANGED
 - A plain text list of player names in the lobby corner, because eight floating
   nametags get hard to read once the characters are packed together.
 - The score screen and the pre-game briefing screen show all 8 players. They
-  previously showed only the top 4 and silently dropped the rest.
+  previously showed only the top 4 and silently dropped the rest. The score
+  screen shows one row per player, so five players get five readable rows
+  rather than eight small ones.
+- POINTS in lobbies of 5-8: the last-one-standing minigames (Lethal Rebound,
+  Spine Breaker, Stable Footing, Debris Platforms, Tunnel Hazard, Forklift
+  Certified, The Filter, Chisel Gauntlet, and the survival points in Wrong Way)
+  pay on the same scale as a 4-player game - 0 for first out, 340 for the
+  winner, evenly spaced in between. They used to pay by lobby size, so a win
+  was worth 680 at eight players and dying fifth beat winning Table Manners.
+  Players eliminated at the same instant now score the same.
+- The end-of-session results screen lists everyone. It used to drop whoever
+  finished fifth or lower.
 - CHISEL GAUNTLET: four more carving stations, and split-screen extended to 8.
 - WRONG WAY: each of the four troughs split into two sets of stairs - eight
   lanes, one player each - with eight screens and eight input arrows.
@@ -91,8 +117,12 @@ WHAT CHANGED
 - FIREARM FACTORY: eight workstations instead of four, and more ingredients to
   go round - previously the same fixed amount was shared however many people
   were playing.
-- MINEFIELD, DEBRIS PLATFORMS, TUNNEL HAZARD, LETHAL REBOUND, STABLE FOOTING:
-  seat eight, no other changes needed.
+- DEBRIS PLATFORMS: above four players the level becomes a ring of six or
+  eight platforms, so everyone has a platform - and a debris stream - of their
+  own. It used to seat two players on each of the four platforms, which also
+  doubled the debris falling on them.
+- MINEFIELD, TUNNEL HAZARD, LETHAL REBOUND, STABLE FOOTING: seat eight, no
+  other changes needed.
 - INSIDE JOB: fixed a bug where, at 6 or more players, the syringe could never
   be found and the round would never end. The hunt display now shows all 8.
 - SPINE BREAKER: the spider kills faster in bigger lobbies, so an 8-player
@@ -121,8 +151,10 @@ KNOWN ROUGH EDGES
 - SPINE BREAKER at 7-8 players: you get less time to throw the spider onto
   somebody else before it kills you - roughly 9 seconds at 8 players against
   20 at 4. That is the trade for a round that does not drag.
-- DEBRIS PLATFORMS: eight players share four platforms, so you start paired up
-  with someone rather than alone.
+- DEBRIS PLATFORMS: the ring of platforms for 5-8 players is new. It has been
+  watched in a test session but not yet played by a full lobby. If a platform
+  looks misplaced, is cut off by the edge of the screen, or its press comes
+  down in the wrong spot, that is worth reporting.
 - In a full lobby, players can spawn touching and visibly push apart for an
   instant at the start of a minigame. It settles immediately.
 - The lobby's 8 character previews have been tested for loading but never seen

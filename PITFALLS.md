@@ -284,7 +284,7 @@ dated *session-log entry* lives in `SESSION-LOG.md` (or
     - **The id mismatch misroutes silently.** A mod RPC named `mod_*` sorts
       before most vanilla names, shifting every vanilla id after it by one, so a
       modded peer and an unmodded one disagree about what each id means — at any
-      roster size, with no error. Hence the `zz_` prefix on the 8 mod RPCs:
+      roster size, with no error. Hence the `zz_` prefix on the 9 mod RPCs:
       nothing in vanilla begins with "zz", so they sort **after** every vanilla
       name in their chains and vanilla's ids stay identical to an unmodded build.
       **Any new mod `@rpc` must keep that property**; it is the whole basis of
@@ -441,4 +441,22 @@ dated *session-log entry* lives in `SESSION-LOG.md` (or
     until the target is found (`_mod_chairs()` in green_pea.gd), and
     `push_warning` when it is not. The `[SEATS8]` / `[STATIONS]` traces print
     how many nodes were actually found — a count of 0 is the tell.
+39. **Inside the camera frame is not the same as visible - check what stands
+    in FRONT of a new position, including things that only arrive later.**
+    Debris Platforms' ring (§15) was laid out against the frustum, the pillar
+    art's bounds and every neighbour's collider, and all of it measured clean:
+    eight players `ON_DECK` on eight platforms on every peer. The first person
+    to watch it reported that the bottom-middle "pillar" hid the top-middle
+    player. The pillar was the **press** - a 23u-tall block that hangs out of
+    frame until its platform dies, then lands and stays. Vanilla gets away with
+    that because its four platforms are corners and the fixed camera looks down
+    the open middle; a platform on the centre line has no such gap, and a
+    near-corner press shadows half of the side platform behind it. No trace
+    could have shown it: nothing was misplaced, something was *in the way*, and
+    only after an event an idle run reaches but nobody was looking for. For any
+    layout change under a fixed camera, draw the sightlines from the camera to
+    each new position and ask what can stand on them at any point in a round -
+    tall props, effects, and anything that moves. Same lesson as pitfall 28
+    from the other side: there the camera's axes were misread, here its line
+    of sight was.
 ---

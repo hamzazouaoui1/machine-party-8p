@@ -22,9 +22,9 @@ const Epsilon: float = 0.001
 # and game_version their concatenation. That extends the existing three-places
 # rule for the version label - globals.gd, installer/install.py and
 # installer/README.txt still all have to agree on game_version.
-var game_version: String = "v2.1.2-8P-v1.5"
+var game_version: String = "v2.1.2-8P-v1.6-fork"
 const MOD_NETWORK_GAME_VERSION := "v2.1.2"
-const MOD_SUFFIX := "8P-v1.5"
+const MOD_SUFFIX := "8P-v1.6-fork"
 
 
 const GROUP_UI: StringName = "GROUP_UI"
@@ -372,6 +372,80 @@ const modded_minigame_player_cap: Dictionary = {
 func supports_player_count(identifier: MinigameIdentifier, player_count: int) -> bool:
 
 	return player_count <= modded_minigame_player_cap.get(identifier, 8)
+
+# 8-PLAYER MOD: minigames whose payout is the roster size in disguise. They
+# score by survival order - raw 0, 1, 2 ... for the dead, in the order they
+# died, and `player_count` for the winner - so the same placement is worth twice
+# as much at eight players as at four (a win is 8 raw = 680 points instead of
+# 4 raw = 340), while the skill minigames stay where vanilla tuned them (Table
+# Manners tops out at 3 raw at any roster). Unscaled, dying fifth of eight in
+# Lethal Rebound out-earned winning Table Manners, and session totals ran past
+# the score screen's four digits. MINIGAMES.md section 24.
+#
+# game.gd multiplies what these hand to `player_scores_finalized` by
+# mod_score_scale(), which maps the 0..N range back onto vanilla's 0..4. Wrong
+# Way is in the list for the same reason, one step removed: its finalized
+# scores are +1 per rival outlived, so they also run 0..N.
+#
+# Deliberately NOT listed: Duck Hunt (its round count already drops from 2 to 1
+# above four players, which holds its payout level - see
+# MinigameRoundsByPlayerCount), and the minigames that pay per kill or per task
+# (Firearm Factory, Inside Job, Minefield, Table Manners, Smoke Break), whose
+# average payout per player does not grow with the roster.
+const mod_roster_scored_minigames: Array[MinigameIdentifier] = [
+	MinigameIdentifier.DvdRoomba,
+	MinigameIdentifier.SpineBreaker,
+	MinigameIdentifier.DiscoDodge,
+	MinigameIdentifier.JunkPlatform,
+	MinigameIdentifier.TrainRace,
+	MinigameIdentifier.ForkliftCertified,
+	MinigameIdentifier.BurnRecycle,
+	MinigameIdentifier.ChiselGauntlet,
+	MinigameIdentifier.EscalatorPit,
+]
+# The roster vanilla's payouts were tuned for, and the ceiling below which the
+# mod changes nothing (UPDATING.md rule 3).
+const MOD_VANILLA_ROSTER: int = 4
+
+# 1.0 at four players or fewer, and for every minigame not listed above - the
+# caller keeps vanilla's integer arithmetic in that case, so a 1-4 lobby scores
+# exactly as the unmodded game does.
+func mod_score_scale(identifier: MinigameIdentifier, player_count: int) -> float:
+
+	if player_count <= MOD_VANILLA_ROSTER:
+		return 1.0
+	if not mod_roster_scored_minigames.has(identifier):
+		return 1.0
+	return float(MOD_VANILLA_ROSTER) / float(player_count)
+
+# 8-PLAYER MOD: two players killed by the same train or dropped by the same
+# tile are not ranked against each other. Vanilla scores a death by its index
+# in `dead_players`, so victims of one event landed a full raw point apart in
+# whatever order the signals happened to arrive. Deaths closer together than
+# this share the best placement in their group - the same "ties resolve upward"
+# rule The Filter already applies to its per-room batches (section 21).
+const MOD_TIE_WINDOW_MSEC: int = 350
+
+# `dead_players` is the minigame's own death-order list and `death_msec` maps a
+# network id to the Time.get_ticks_msec() of its death. A death with no
+# recorded time is never tied with anything. Callers gate this on the roster
+# exceeding MOD_VANILLA_ROSTER, so 1-4 player games keep vanilla's ordering.
+func mod_share_tied_placements(scores: Dictionary, dead_players: Array, death_msec: Dictionary) -> void:
+
+	var group_start: int = 0
+	while group_start < dead_players.size():
+		var group_end: int = group_start
+		while group_end + 1 < dead_players.size():
+			var earlier = dead_players[group_end]
+			var later = dead_players[group_end + 1]
+			if not death_msec.has(earlier) or not death_msec.has(later):
+				break
+			if death_msec[later] - death_msec[earlier] > MOD_TIE_WINDOW_MSEC:
+				break
+			group_end += 1
+		for index in range(group_start, group_end + 1):
+			scores[dead_players[index]] = group_end
+		group_start = group_end + 1
 
 var default_settings: Dictionary = {
 	"master_volume": 0.2, 

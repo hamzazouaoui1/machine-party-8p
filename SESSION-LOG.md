@@ -13,7 +13,75 @@ Section names cited bare — "Current status", "Open items", *Testing*, the
 "Update procedure" steps — are sections of `UPDATING.md`; *pitfall N* is
 `PITFALLS.md`, *§N* is `MINIGAMES.md`.
 
-### 2026-08-18 (latest) — Documentation audit: single source of truth, closed items and history cut, session log archived through v1.5
+### 2026-11-09 (latest) — v1.6-fork: roster-scaled scoring, a platform per player in Debris Platforms, score rows per player, complete end-of-session results; Mac bottle detection
+
+The first changes driven by people who **played** 5-8 player sessions (open
+item 1). Their report, verbatim in substance: "the points don't seem to be
+accurate", "some games pay far more", and Debris Platforms "puts two players
+per platform instead of all having their own and it doubles the debris, which
+breaks the game". Upstream was still at v1.5 with no scoring or Debris changes
+(checked 2026-11-09), so this is a fork with its own wire label,
+`8P-v1.6-fork`.
+
+**Environment.** Windows 11, working from a GitHub zip (no `.git`, no
+`project/`, no GDRE, no pristine `.pck` - the only game copy was already
+patched with v1.5). Vanilla logic was read by decoding the shipped `.gdc`
+token streams and binary `.scn` scenes directly; test builds were made by
+re-applying the overlay to that patched `.pck` into `testgame/` (re-applying is
+idempotent: each overlay file replaces the entry of the same path and removes
+its compiled siblings). The 8-instance harness was driven by a PowerShell
+stand-in for `tools/localtest.sh`. None of those helpers are in the repo.
+**The Steam install was never written to.**
+
+| Change | Files | Owner |
+|---|---|---|
+| Survival-order minigames pay on the 4-player scale above four players (`4 / roster`); same-moment deaths share the best placement of their group | `game.gd`, `globals.gd`, `dvd_roomba.gd`, `spine_breaker.gd`, `disco_dodge.gd`, `train_race.gd`, `junk_platform.gd` | §24 |
+| Debris Platforms: runtime ring of 6 or 8 platforms, one per player; debris pool scaled; collapsed platforms clear themselves away | `junk_platform.gd` | §15, pitfall 39 |
+| Score screen: one row per player (5 -> 5 rows at 0.75, not 8 at 3/7) | `intermission_score_screen.gd` | §11 |
+| End-of-session results list every player (ranks 1-8), three rows | `intermission_session_end.gd` (**new overlay file, 56 -> 57**) | §25 |
+| Installer finds the game inside CrossOver / Whisky bottles on macOS | `installer/install.py`, `installer/README.txt` | Toolchain |
+| `mod_marker_numbering.py` compared backslash paths against a forward-slash whitelist and failed on Windows | `tools/checks/mod_marker_numbering.py` | - |
+| Version label `v2.1.2-8P-v1.6-fork` | `globals.gd`, `install.py`, `README.txt` | step 6 |
+
+**Evidence.** All runs `-startgame N -minigame <Identifier>` (the `START=1`
+path) on the release binary, idle instances. `[POINTS8]` and `[END8]` are
+temporary traces built into the test pck from a side overlay - **they are not
+in `mod/`**; `[PLATFORM]` and `[SCORE8]` are.
+
+| Run | Result |
+|---|---|
+| JunkPlatform, 8 | every peer: `ring asked=8 platforms=8 cloned=4`, four `clone ... rebound=4/4`; 8 players `ON_DECK dist=0.00` on 8 distinct platforms x 3 rounds (24/24 per peer, 0 `OFF_DECK`); `cleared` 24x per peer, `colliders=1`; no `SCRIPT ERROR` / `Parse Error` / mod warning |
+| JunkPlatform, 5 | every peer: `asked=6 platforms=6 cloned=2`; 5 players on 5 distinct platforms; `[SCORE8] players=5 rows=5 scale=0.750` on host and all four clients |
+| JunkPlatform, 4 (rule 3 control) | no `ring`, no `clone`; slots on `Marker3D`..`Marker3D4` at +-13; `[SCORE8] rows=4 scale=1.000 expanded=false` |
+| Points, JunkPlatform 4 | `roster=4 scale=1.000`: raw 0/1/2/4 -> 0/85/170/340 - vanilla's values |
+| Points, JunkPlatform 5 | `roster=5 scale=0.800`: raw 1/2/3/5 -> 68/136/204/340 |
+| Points, JunkPlatform 8 | `roster=8 scale=0.500`: raw 2/3/4/5/6/8 -> 85/128/170/213/255/340 |
+| Points, SpineBreaker 8 | raw 0..6 and 8 -> 0/43/85/128/170/213/255/340 - the full table of §24, one death at a time |
+| Points, DvdRoomba 8 | three rounds, winner 340 each, tied groups sharing a value (e.g. four at raw 5 -> 213) |
+| Points, TrainRace 8 | first train kills seven at once: seven tied at raw 6 -> 255, survivor 340 - the upward-tie degenerate case, recorded in §24 |
+| Points, DiscoDodge 8 | tied groups 3/3/3/3, 5/5, 7/7 -> 128/213/298; nobody at 340 because the last two fell together |
+| EscalatorPit, 8 | loaded, `[LANES8] lanes=8 screens=8`, reached `Play`, 75 s with no script error - but idle players do not finish a round in that window, so **its scaled finalization was not exercised** |
+| Points, DvdRoomba 4 (rule 3 control) | `roster=4 scale=1.000`: raw 0/1/2/4 -> 0/85/170/340 in all three rounds, no tie sharing |
+| End of session, 8 | every peer: `winner=P2`, seven losers, `rows=["P3, P1, P4", "P6, P8, P5", "P7"]`, then `exit_session_after_end` - ran to its end on host and seven clients |
+| 4-vs-8 error classes (pitfall 12), JunkPlatform | filtered class sets at 5 and at 8 are subsets of the set at 4 - nothing roster-related |
+| `tools/checks/*.py` | all five pass (`57 files: 41 .gd, 16 .tscn`; 9 `zz_` RPCs) |
+| Mac bottle detection | simulated `~/Library` tree with a CrossOver and a Whisky bottle: both game folders found, empty home finds nothing. **Never run on a real Mac** |
+
+**Seen by a person, not only measured.** The maintainer watched the 8-window
+runs. First look at the ring produced the report that became pitfall 39 (the
+landed press hiding the far-middle platform); the self-clearing collapse was
+the response, and on the re-look the maintainer confirmed it: the press lifts
+away and the far-middle player stays visible ("yes, looks right").
+
+**Not verified.** Nothing here has been played by a full lobby: skill play,
+real tie frequency, whether mass wipes pay too well under upward ties, how the
+ring reads with eight people throwing debris across 3.5u gaps (vanilla's are
+14u), the debris pool at 80 over a real Steam connection, and the results
+screen with long Steam names. Debris Platforms' `.tscn` could now leave the
+overlay (its `_MOD` markers are unread) - not done, it is inert and removing a
+file wants a pristine `.pck` to test against.
+
+### 2026-08-18 — Documentation audit: single source of truth, closed items and history cut, session log archived through v1.5
 
 No code change. A concision pass over the whole doc set under documentation
 policy rules 1–3 (one home per fact; tighten wording, never substance; archive,

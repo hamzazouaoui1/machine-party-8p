@@ -19,12 +19,16 @@ var rank_y_positions: Array[float] = [0.84, 0.325, -0.19, -0.705]
 const MOD_VANILLA_RANK_Y: Array[float] = [0.84, 0.325, -0.19, -0.705]
 const MOD_VANILLA_RANKS: int = 4
 const MOD_MAX_RANKS: int = 8
-# The eight rows are resampled across the span the four originals covered
-# (0.84 .. -0.705) rather than extended downward, which would run off the
-# screen panel. That halves the row pitch, so the rows are scaled by the same
-# ratio (3/7) to preserve the shipped gap-to-row proportion. Tunable: raise it
-# for larger text at the cost of tighter gaps.
-const MOD_ROW_SCALE: float = 3.0 / 7.0
+# The board shows ONE ROW PER PLAYER above four: five players get five rows,
+# not eight with three blank placeholders. The rows are resampled across the
+# span the four originals covered (0.84 .. -0.705) rather than extended
+# downward, which would run off the screen panel. That shrinks the row pitch by
+# 3/(rows-1), so the rows are scaled by the same ratio to preserve the shipped
+# gap-to-row proportion: 0.75 at five players, 0.6 at six, 0.5 at seven and
+# 3/7 at eight. Until 2026-11-09 every roster above four got the eight-row
+# board at 3/7, which is the smallest text for the lobbies that need it least.
+func _mod_row_scale(rows: int) -> float:
+	return float(MOD_VANILLA_RANKS - 1) / float(maxi(rows, MOD_VANILLA_RANKS) - 1)
 # Instantiated from the PackedScene rather than duplicate()'d: user_info.tscn
 # wires label_rank / label_score / label_name / opacity_visuals through
 # node_paths, and duplicate() copies those as references to the *template's*
@@ -75,27 +79,38 @@ func _mod_set_capacity(player_count: int) -> void:
 	var expand: bool = (player_count > MOD_VANILLA_RANKS
 		and mod_extra_containers.size() == MOD_MAX_RANKS - MOD_VANILLA_RANKS)
 
+	# One row per player, never fewer than the shipped four nor more than eight.
+	var rows: int = MOD_VANILLA_RANKS
+	if expand:
+		rows = clampi(player_count, MOD_VANILLA_RANKS, MOD_MAX_RANKS)
+
 	var active: Array[Intermission_UserContainer] = []
 	active.assign(mod_vanilla_containers)
 	var ys: Array[float] = []
 
 	if expand:
-		active.append_array(mod_extra_containers)
 		var top: float = MOD_VANILLA_RANK_Y[0]
 		var bottom: float = MOD_VANILLA_RANK_Y[MOD_VANILLA_RANKS - 1]
-		var step: float = (top - bottom) / float(MOD_MAX_RANKS - 1)
-		for i in MOD_MAX_RANKS:
+		var step: float = (top - bottom) / float(rows - 1)
+		for i in rows:
 			ys.append(top - step * i)
 	else:
 		ys.assign(MOD_VANILLA_RANK_Y)
-		for uc in mod_extra_containers:
+
+	# Spare rows the roster does not need stay parked: hidden, emptied, and out
+	# of the active set so nothing sorts against them.
+	for i in mod_extra_containers.size():
+		var uc: Intermission_UserContainer = mod_extra_containers[i]
+		if expand and MOD_VANILLA_RANKS + i < rows:
+			active.append(uc)
+		else:
 			uc.visible = false
 			uc.set_user_container_as_empty()
 
 	rank_y_positions = ys
 	user_container_array = active
 
-	var row_scale: float = MOD_ROW_SCALE if expand else 1.0
+	var row_scale: float = _mod_row_scale(rows) if expand else 1.0
 	for uc in active:
 		uc.scale = Vector3.ONE * row_scale
 		# Each container builds this from get_parent().get_children() in its own

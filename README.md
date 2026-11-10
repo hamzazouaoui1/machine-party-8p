@@ -16,11 +16,22 @@ or submit Pull requests with changes. I'm still figuring GitHub out, so if I mad
 Raises the online (Steam/ENet) player cap from 4 to 8 for **Machine Party
 v2.1.2** (Godot 4.5.2). All fifteen minigames in the rotation seat eight
 players, and the lobby, briefing screen and score screen grow to match. The mod
-is an overlay of 56 files (40 `.gd`, 16 `.tscn`) applied to the shipped
+is an overlay of 57 files (41 `.gd`, 16 `.tscn`) applied to the shipped
 `Machine Party.pck`: one file is new, the rest replace shipped ones.
 
-This is mod release **v1.5**; in game it identifies itself as
-**`v2.1.2-8P-v1.5`** — game version, mod suffix, mod release.
+This is mod release **v1.6-fork**, a fork of upstream's v1.5; in game it
+identifies itself as **`v2.1.2-8P-v1.6-fork`** — game version, mod suffix, mod
+release. It and upstream builds refuse each other in a lobby, by design: it
+changes scoring and one minigame's layout, so everyone in a 5-8 lobby needs
+this same build.
+
+**What v1.6-fork changed**, all from reports by people who played real 5-8
+player sessions: the last-one-standing minigames pay on the 4-player scale
+above four players instead of by lobby size; Debris Platforms gives every
+player their own platform instead of seating two on each; the score screen
+shows one row per player; the end-of-session results list everyone. Lobbies of
+1-4 are unaffected by all four. Detail in `MINIGAMES.md` sections 11, 15, 24
+and 25.
 
 ## Status
 
@@ -53,7 +64,12 @@ Lobbies of 1-4 play as vanilla, with two deliberate exceptions — see
 The mod zip (~31 MB, since it bundles a Windows Python runtime — no Python
 install needed on Windows) is published on the project's Releases page.
 Extract it and double-click `WindowsInstall.bat` (Windows) or `install.sh`
-(macOS/Linux), or run `python3 install.py` directly on any platform. It
+(Linux), or run `python3 install.py` directly on any platform. **On a Mac** the
+game has no native build — Steam lists Windows and Linux only — so it is the
+Windows version running under CrossOver or Whisky, and the mod patches that
+copy exactly as it would on Windows (the `.pck` is platform-neutral): run
+`sh install.sh` from Terminal, and the installer searches CrossOver and Whisky
+bottles for the game; any other bottle works with `--game-dir`. It
 auto-detects the Steam copy and patches `Machine Party.pck` in place; the
 executable and the native libraries beside it are untouched. **No backup is
 kept** — Steam's *Verify integrity of game files* re-downloads the original at
@@ -78,7 +94,7 @@ silently reverts the mod the same way, so re-run the installer after one.
 
 ### Verify
 
-`Globals.game_version` becomes `v2.1.2-8P-v1.5`, and that string is already wired to
+`Globals.game_version` becomes `v2.1.2-8P-v1.6-fork`, and that string is already wired to
 the main menu's version label, so the corner of the menu is the fastest check.
 
 Without launching:
@@ -119,7 +135,9 @@ reviewable as a normal diff. The build is byte-reproducible;
 | `scenes/lobby/lobby_scene.tscn` + `lobby_scene.gd` | Seat map derived from `MAX_PLAYERS` instead of four hardcoded entries, and four more character preview slots (`Player5`-`Player8`) appended to the handler's exported arrays. Without the first, players 5-8 join and are never assigned a seat; without the second, `customization_assigners[seat]` was an out-of-bounds crash rather than a layout problem. The room has four chairs, so players 5-8 sit on the laps of players 1-4 — hand-placed seats, positioned in the running game; the script moves nothing. |
 | `modules/multiplayer_lobby/mod_player_name_list.gd` | **The mod's one new file.** A plain text roster of Steam names in the lobby corner. At eight players the seated characters are packed close enough that the floating nametags stop being readable. |
 | `scripts/components/.../customization_assigner.gd` | Renders the three added suits. Only five suit textures exist, so the added colours reuse a shipped texture with an `albedo_color` tint and keep the original shading; swapping in real textures later just means adding the files and dropping the tint entry. |
-| `minigames/intermission_new/.../intermission_score_screen.gd` | 8 rows. The board filled from a score-*sorted* list bounded by array size, so the four lowest-placed players were silently dropped — no crash. Also clamps a negative reverb pitch that only occurs once score totals are large enough. |
+| `minigames/intermission_new/.../intermission_score_screen.gd` | One row per player, up to 8. The board filled from a score-*sorted* list bounded by array size, so the four lowest-placed players were silently dropped — no crash. Also clamps a negative reverb pitch that only occurs once score totals are large enough. |
+| `minigames/intermission_new/.../intermission_session_end.gd` | The end-of-session results list every player. Vanilla collected ranks 1-4 only; simply sending more names would crash the screen, so above three they are packed several to a row. |
+| `scripts/scenes/game/game.gd` + `autoloads/globals.gd` (scoring) | Survival-order minigames pay by roster size in vanilla (a win is `player_count` raw points). Above four players their payouts are scaled by `4 / roster`, back onto the 0-340 range a four-player game uses, and players eliminated at the same instant share a placement. |
 | `minigames/intermission_new/.../intermission_briefing_screen.gd` | 8 player cards. One array was *assigned* by index — an out-of-bounds write, not a truncation. |
 | 15 minigame `.tscn` files | Spawn markers expanded 4 → 8. |
 | `bootstrap.gd`, `multiplayer_menu.gd`, `multiplayer_backend.gd` | The `-localtest` harness only: opens the developers' debug lobby in a release build, tiles and titles eight windows, staggers the joins. No effect on a normal session. |
@@ -150,7 +168,7 @@ and `MinigameReadableNames` in `globals.gd` is the only authoritative map.
 | STABLE FOOTING | `DiscoDodge` | `MultiplayerSpawner.spawn_limit` 4 → 8, kept as defence-in-depth. | Re-measurement showed the cap had no effect either way in this build; the raise is retained because matching it to the player count is correct regardless. All eight spawn and replicate to every client. |
 | TABLE MANNERS | `GreenPea` | Runtime 8-seat layout — chairs repositioned and narrowed, camera pulled back and widened — applied by RPC only above 4. The scene ships 4 extra chairs `visible = false`. | — |
 | SMOKE BREAK | `SmokeBreak` | 8 seats with two added crates; gun aim angles derived for all 8; four separate seat-capped arrays fixed, including a `match seat:` whose unmatched case left `anim_player.play("")` so eliminated players never fell. | Player-model clipping on the left four seats. Cause is seat *facing*, not spacing; blocked by pinned seats and the camera frame. Cosmetic, accepted. |
-| DEBRIS PLATFORMS | `JunkPlatform` | 8 spawn markers. | Two players share each platform (4 decks, 8 players) — the clones sit beside an original on the same deck. Playable because scoring is last-man-standing, so nothing assumes one player per deck; you just start paired up. |
+| DEBRIS PLATFORMS | `JunkPlatform` | **A platform per player above four**: a ring of 6 (5-6 players) or 8 (7-8) platforms built at runtime by RPC — the four shipped corners slide out from 13 to 15.5 and mirror pairs are cloned onto the mid-edges, each with its own art, press and alarm. Debris pool scaled to the roster; a collapsed platform's press lifts away and the platform drops into the pit. | Until v1.6-fork two players shared each deck, and since debris drops once per *player*, a shared deck took twice the debris. Placement has been looked at in the 8-window harness, not yet played by a full lobby. |
 | TUNNEL HAZARD | `TrainRace` | 8 spawn markers, nothing else — the level already ships 8 nooks and `nooks_to_open` is computed, not a constant. | Nook contention at 8 is unexercised: idle instances are run over by the first train. |
 | INSIDE JOB | `KnifeAtTheOffice` | Search target clamped to the 36 containers that exist — above it the syringe was unfindable and the round never ended. Hunt HUD grown from 4 to 8 icons. | Search economy in real play is untested; unattended instances never search a container. |
 | SPINE BREAKER | `SpineBreaker` | 8 spawn markers, plus kill pace scaled to the roster (fuse and dead time × `3/(roster−1)`, clamped to 1.0). The mod's only gameplay *tuning* change: without it an 8-player round runs ~2.5x as long as a 4-player one, ~190s instead of ~93s. Unchanged at 1-4. | At 7-8 players the window to throw the spider onto someone else drops to ~9s from ~20s. Deliberate trade; `MOD_VANILLA_KILLS` is the knob. |
@@ -207,12 +225,17 @@ Ranked by how much they would actually bite.
   not yet been seen over real Steam specifically. Unmodded players' logs show
   harmless `rpc node checksum failed` lines in mixed sessions (engine noise,
   verified print-only). Reports welcome.
-- **Nobody has played an 8-human session.** The harness runs eight unattended
-  instances, so scoring, elimination order and win conditions at 8 are unproven
-  everywhere — the weakest claim in this file. It also skews coverage: a minigame
-  where idling is fatal tests its death path well and its skill path not at all,
-  which is why Tunnel Hazard's nook contention and Inside Job's search economy
-  have never run.
+- **The test harness cannot play.** It runs eight unattended instances, so
+  elimination order and win conditions at 8 are unproven by it everywhere — the
+  weakest claim in this file. It also skews coverage: a minigame where idling
+  is fatal tests its death path well and its skill path not at all, which is
+  why Tunnel Hazard's nook contention and Inside Job's search economy have never
+  run. Real 5-8 player sessions have since been played and are what v1.6-fork
+  fixes; the next one will likely find something else.
+- **Debris Platforms' ring and the end-of-session name rows are new in
+  v1.6-fork** and verified by trace on every peer, but looked at by one person
+  in the test harness rather than played by a full lobby. Long Steam names on
+  the results screen in particular have not been seen.
 - **Expanded spawn pairs start overlapping.** Added markers are placed 1.2u from
   their original, but a character footprint is ~1.6u, so in every expanded scene
   each pair begins interpenetrating and shoves apart on frame 1. Visible as a

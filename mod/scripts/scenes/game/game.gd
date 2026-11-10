@@ -833,9 +833,26 @@ func _on_minigame_player_scored(_network_id: int, _score: int):
 
 func _on_minigame_player_score_finalized(player_scores):
 
+	# 8-PLAYER MOD: survival-order minigames pay by roster size, so above four
+	# players their raw scores are mapped back onto vanilla's 0..4 range before
+	# the multiplier (Globals.mod_roster_scored_minigames has the reasoning).
+	# The roster is the one the round STARTED with - the minigame's own
+	# `player_count`, which is also what it hands the winner - so a player who
+	# drops mid-round does not rescale everybody else. At four or fewer, and for
+	# every other minigame, the scale is 1.0 and vanilla's integer line runs.
+	var mod_roster = minigame.get("player_count") if is_instance_valid(minigame) else null
+	if not (mod_roster is int) or mod_roster <= 0:
+		mod_roster = maxi(player_scores.size(), PlayerManager.player_presences.size())
+	var mod_scale: float = Globals.mod_score_scale(Globals.current_minigame_identifier, mod_roster)
+
 	for network_id in player_scores.keys():
 		if round_score_by_network_id.has(network_id):
-			round_score_by_network_id[network_id] += player_scores[network_id] * score_multiplier
+			if mod_scale == 1.0:
+				round_score_by_network_id[network_id] += player_scores[network_id] * score_multiplier
+			else:
+				round_score_by_network_id[network_id] += roundi(
+					player_scores[network_id] * mod_scale * score_multiplier
+				)
 
 func _on_score_screen_finished():
 

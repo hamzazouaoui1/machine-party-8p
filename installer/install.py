@@ -192,6 +192,28 @@ def windows_steam_dirs(use_registry=False):
     return out
 
 
+def mac_bottle_steam_dirs(home):
+    """Steam clients living inside Windows-compatibility bottles on macOS.
+
+    Machine Party ships for Windows and Linux only - Steam lists no macOS
+    build - so on a Mac the game is the Windows build running under CrossOver
+    or Whisky, and its Steam client sits inside that bottle's drive_c rather
+    than in ~/Library/Application Support/Steam. The .pck is the same file on
+    every platform, so finding it is all the installer needs. A bottle kept
+    somewhere else (or made by another tool) is still reachable with
+    --game-dir.
+    """
+    out = []
+    for bottles in (
+        "Library/Application Support/CrossOver/Bottles",
+        "Library/Containers/com.isaacmarovitz.Whisky/Bottles",
+    ):
+        for program_files in ("Program Files (x86)", "Program Files"):
+            out += sorted(glob.glob(os.path.join(
+                home, bottles, "*", "drive_c", program_files, "Steam")))
+    return out
+
+
 def steam_roots(use_registry=False):
     home = os.path.expanduser("~")
     sysname = platform.system()
@@ -199,6 +221,7 @@ def steam_roots(use_registry=False):
         cands = windows_steam_dirs(use_registry)
     elif sysname == "Darwin":
         cands = [os.path.join(home, "Library/Application Support/Steam")]
+        cands += mac_bottle_steam_dirs(home)
     else:
         cands = [os.path.join(home, ".local/share/Steam"),
                  os.path.join(home, ".steam/steam"),
@@ -484,7 +507,7 @@ def verify(game_dir):
     if state == "patched":
         print(f"\n  PATCHED - all {len(overlay)} mod files present, "
               f"originals correctly removed.")
-        print(f"  In game, the main menu should read {SUPPORTED_VERSION}-8P-v1.5")
+        print(f"  In game, the main menu should read {SUPPORTED_VERSION}-8P-v1.6-fork")
         return 0
     if state == "clean":
         print("\n  NOT PATCHED - this is the original game.")

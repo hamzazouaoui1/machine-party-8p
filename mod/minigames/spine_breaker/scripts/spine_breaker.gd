@@ -19,6 +19,10 @@ var active_players: Dictionary[int, SpineBreakerPlayer]
 
 var player_scores: Dictionary[int, int]
 var dead_players: Array[int]
+# 8P MOD: when each player died, so victims of one event (the same train, the
+# same dropped tile) can share a placement instead of being ranked by signal
+# arrival order - Globals.mod_share_tied_placements(), MINIGAMES.md section 24.
+var mod_death_msec: Dictionary[int, int] = {}
 var finished: bool = false
 var player_count: int = 0
 
@@ -283,6 +287,11 @@ func check_game_end():
 	for i in dead_players.size():
 		player_scores[dead_players[i]] = i
 
+	# 8P MOD: same-moment deaths share the best placement of their group. Above
+	# four players only, so a 1-4 lobby keeps vanilla's ordering (rule 3).
+	if player_count > Globals.MOD_VANILLA_ROSTER:
+		Globals.mod_share_tied_placements(player_scores, dead_players, mod_death_msec)
+
 	for network_id in active_players.keys():
 		player_scores[network_id] = player_count
 
@@ -384,6 +393,7 @@ func _on_player_died(_network_id: int):
 	if active_players.has(_network_id):
 		active_players.erase(_network_id)
 		dead_players.append(_network_id)
+		mod_death_msec[_network_id] = Time.get_ticks_msec()
 
 	await get_tree().create_timer(1.0).timeout
 
