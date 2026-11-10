@@ -1825,3 +1825,64 @@ every peer received `winner=P2` and seven losers, printed
 `exit_session_after_end` - the sequence ran to its end on host and all seven
 clients. **Whether three names fit the row's width with long Steam names has
 not been looked at**; the harness names are `P1`-`P8`.
+
+### 26. Synchronizer send-rate cap above four players - `game.gd`
+
+**Reported 2026-11-10:** a player running the game on a Mac saw "visual bugs
+and players teleporting", only with the mod. Machine Party has no macOS build,
+so that is the Windows build under a translation layer; the mod contains no
+platform checks and adds no per-frame work, so nothing in it could be "tuned
+for Mac". What the report led to instead is a property of vanilla's netcode
+that the mod makes expensive.
+
+**The mechanism.** Every player object carries a `MultiplayerSynchronizer`
+whose properties are in replication mode 1 (*always*) with
+`replication_interval` unset - read from the shipped player scenes - so its
+owner sends a state packet on **every rendered frame** and the host relays it
+to every other peer. Traffic therefore scales with frame rate times the square
+of the roster: a 240 Hz player sends four times what a 60 Hz player does, and
+eight players are 56 relayed streams where four are 12. Payload varies by
+minigame: Lethal Rebound's player syncs three properties, Spine Breaker's six
+or more.
+
+**The evidence** is the game's own log of a real six-player session on v1.5
+(`%APPDATA%/Godot/app_userdata/Machine Party/logs/`, read from a client).
+After each Spine Breaker round every other player's stray updates for the
+freed scene numbered 6-11; **one peer's numbered 993, 993, 983 and 987** -
+4,559 of the session's 4,932 failed lookups came from that one peer - and its
+tail ran on until the next round started. In Lethal Rebound, with half the
+payload, the same peer's excess was about 2.5x. Whether that peer was the Mac,
+and whether the tail is a send backlog or a scene freed late, **could not be
+established from one side of the session**; what the log does establish is
+that one peer's update stream was far out of step with everyone else's, in
+proportion to how much the minigame syncs.
+
+**The change.** `_mod_on_node_added()` in `game.gd`, connected to
+`SceneTree.node_added` for the life of the Game scene, sets
+`replication_interval = MOD_SYNC_INTERVAL` (0.015 s) on every
+`MultiplayerSynchronizer` entering the tree while the roster exceeds four. It
+runs on every peer because a synchronizer is sent by its owner. 0.015 sits
+just under a 60 Hz frame (16.7 ms), so a 60 FPS player still sends every frame
+- a full 1/60 would skip alternate frames on timing jitter - and only faster
+frame rates are thinned. No RPC and no scene edit; lobbies of four or fewer
+are returned from before the property is touched (rule 3).
+
+**Measured 2026-11-10**, six players in Spine Breaker over a 20 s steady-state
+window, per-process socket bytes, frame rates 102-224 FPS in both runs:
+
+| | host | each client |
+|---|---|---|
+| before | 113.9 KB/s | 28.2 KB/s |
+| after | 50.0 KB/s | 14.4-17.9 KB/s |
+
+A temporary trace (not in `mod/`) printed every synchronizer the hook saw: at
+six players `capped ... interval=0.015` on host and all five clients and never
+`left alone`; at four players `left alone ... interval=0.0` on all four peers
+and never `capped`.
+
+**Not verified:** that this cures the report. It bounds what each player sends
+and halves what a slow machine has to process, which is the part of the
+problem the mod can reach; the Mac player's renderer glitches, if they come
+from the translation layer, are outside it. The untried test that would
+settle the cause is his own log from a session, and whether capping his frame
+rate (`--max-fps 60` as a Steam launch option) changes what others see.

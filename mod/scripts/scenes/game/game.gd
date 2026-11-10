@@ -104,6 +104,8 @@ func _ready() -> void :
 
 	intermission_manager.game = self
 
+	# 8P MOD: see _mod_on_node_added().
+	get_tree().node_added.connect(_mod_on_node_added)
 
 	var args = Array(OS.get_cmdline_args())
 	if args.has("-trailer"):
@@ -202,7 +204,38 @@ func _process(delta: float) -> void :
 			connect_request_check_timer = 0.0
 			check_connection_requests()
 
+# 8-PLAYER MOD: every player object carries a MultiplayerSynchronizer whose
+# properties are in "always" mode with no replication interval, so its owner
+# sends a state packet on EVERY RENDERED FRAME, and the host relays each one to
+# every other peer. Traffic therefore grows with frame rate times the square of
+# the roster: one player on a 240 Hz monitor sends four times what a 60 Hz
+# player does, and eight players are 56 relayed streams where four are 12.
+# A real six-player session (v1.5, 2026-11-10) logged one peer's updates
+# arriving in a tail of ~990 packets after every Spine Breaker round - Spine
+# Breaker syncs the most properties per packet - against 6-11 from each of the
+# others; that peer's player was the one seen teleporting.
+#
+# Above four players each synchronizer is held to one packet per
+# MOD_SYNC_INTERVAL as it enters the tree, on every peer (a synchronizer is
+# sent by its owner, so the cap has to be set where the owner runs). 0.015 s
+# sits just under a 60 Hz frame, so a 60 FPS player still sends every frame and
+# only faster frame rates are thinned. Lobbies of four or fewer are untouched.
+# MINIGAMES.md section 26.
+const MOD_SYNC_INTERVAL: float = 0.015
+
+func _mod_on_node_added(node: Node) -> void:
+
+	if not (node is MultiplayerSynchronizer):
+		return
+	if PlayerManager.player_presences.size() <= Globals.MOD_VANILLA_ROSTER:
+		return
+	if node.replication_interval < MOD_SYNC_INTERVAL:
+		node.replication_interval = MOD_SYNC_INTERVAL
+
 func _exit_tree() -> void :
+
+	if get_tree().node_added.is_connected(_mod_on_node_added):
+		get_tree().node_added.disconnect(_mod_on_node_added)
 
 	GameManager.game_finished.emit()
 	PauseMenu.set_can_activate(false)

@@ -13,7 +13,42 @@ Section names cited bare — "Current status", "Open items", *Testing*, the
 "Update procedure" steps — are sections of `UPDATING.md`; *pitfall N* is
 `PITFALLS.md`, *§N* is `MINIGAMES.md`.
 
-### 2026-11-09 (latest) — v1.6-fork: roster-scaled scoring, a platform per player in Debris Platforms, score rows per player, complete end-of-session results; Mac bottle detection
+### 2026-11-10 (latest) — Synchronizer send-rate cap above four players, from a real six-player session log (still v1.6-fork, unreleased)
+
+Report: a player on a Mac saw "visual bugs and players teleporting", **only
+with the mod**. No Mac was available. The mod has no platform checks and no
+per-frame additions (audited), so the investigation went to evidence instead:
+the game's own log folder on the maintainer's PC held a 27,157-line log of a
+real **six-player session on v1.5**, read from a client. It was the newest
+file in a five-file rotation that this project's test launches had been
+overwriting since 2026-11-09 (pitfall 40).
+
+| Finding in that log | Number |
+|---|---|
+| Failed synchronizer lookups, by sending peer | 4,559 from one peer; 120-128 from each of three others |
+| That peer's stray updates after each of four Spine Breaker rounds | 993, 993, 983, 987 (others: 6-11) |
+| Same peer after Lethal Rebound rounds | ~22 over four rounds (others: 7-10) |
+| `rpc node checksum failed` lines | none - the peers' scripts agreed |
+| Player synchronizers in the shipped scenes | mode *always*, no `replication_interval`: one packet per rendered frame; Spine Breaker's player syncs 6+ properties, Lethal Rebound's 3 |
+
+Change: `game.gd` caps every `MultiplayerSynchronizer` at one packet per
+0.015 s above four players, on every peer (§26). Nothing else.
+
+| Check | Result |
+|---|---|
+| Traffic, 6 players, Spine Breaker, 20 s window, per-process socket bytes, same frame rates (102-224 FPS) | host 113.9 -> 50.0 KB/s; clients 28.2 -> 14.4-17.9 KB/s |
+| Gate, temporary trace (not in `mod/`) | 6 players: every synchronizer `capped interval=0.015` on host and five clients, none left alone; 4 players: every one `left alone interval=0.0` on all four peers, none capped |
+| Script / parse errors in those runs | 0 |
+| Launch options a Mac player can try (`--rendering-driver d3d12`, `--rendering-method mobile`, `--rendering-method gl_compatibility`) | the release binary starts and reaches the lobby with each, on Windows; how minigames look under them was not checked |
+| `tools/checks/*.py` | all five pass |
+
+**Not established:** which peer was the Mac; whether the long tail was a send
+backlog or a scene freed late; and therefore whether this change cures the
+report. It bounds per-player traffic and halves what every machine has to
+process, which is the part the mod can reach. The reporter's own `godot.log`
+and a `--max-fps 60` trial are the tests that would settle it.
+
+### 2026-11-09 — v1.6-fork: roster-scaled scoring, a platform per player in Debris Platforms, score rows per player, complete end-of-session results; Mac bottle detection
 
 The first changes driven by people who **played** 5-8 player sessions (open
 item 1). Their report, verbatim in substance: "the points don't seem to be

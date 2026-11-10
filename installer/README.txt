@@ -53,6 +53,14 @@ the Windows game folder inside that bottle, for example:
 
 Quit the game (and Steam inside the bottle) before installing.
 
+If the game stutters or looks wrong on a Mac, try a different graphics mode.
+In Steam, right-click Machine Party -> Properties -> Launch Options and enter
+one of these, one at a time (remove it again if the game will not start):
+
+  --rendering-driver d3d12
+  --rendering-method mobile
+  --max-fps 60
+
 
 DID IT WORK?
 ------------
@@ -105,6 +113,10 @@ WHAT CHANGED
   Players eliminated at the same instant now score the same.
 - The end-of-session results screen lists everyone. It used to drop whoever
   finished fifth or lower.
+- In lobbies of 5-8, each player's position updates are limited to about 60 a
+  second. The game normally sends one per frame drawn, so a player on a fast
+  monitor sent several times more than everyone else, and with more players
+  that added up. This is meant to cut down on players appearing to teleport.
 - CHISEL GAUNTLET: four more carving stations, and split-screen extended to 8.
 - WRONG WAY: each of the four troughs split into two sets of stairs - eight
   lanes, one player each - with eight screens and eight input arrows.

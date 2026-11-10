@@ -268,7 +268,10 @@ changes host-side scoring. What it changed, from the first reports by people
 who actually played 5-8 player sessions: survival-order minigames pay on the
 4-player scale above four players (§24), Debris Platforms gives every player
 a platform of their own (§15), the score screen shows one row per player (§11)
-and the end-of-session results list everyone (§25).
+and the end-of-session results list everyone (§25). Above four players every
+player's position updates are also capped at about 60 a second instead of one
+per rendered frame (§26) - added after a real six-player log showed one peer's
+update stream far out of step with the rest.
 All fifteen rotation minigames are verified at 8 players on the host *and* on
 clients with **positive trace counts** (not absence-of-errors), and each has
 been watched at 8 by a person. Nothing reachable is capped:
@@ -596,7 +599,7 @@ see step 5 of the update procedure. The "§" column is the section of
 | `modules/multiplayer/network_manager.gd` | 1 | `MAX_PLAYERS` 4→8; `-localtest` backend; `mod_all_peers_modded()` |
 | `modules/multiplayer/backends/steam_backend.gd`, `backends/enet_backend.gd` | — | **vanilla-compat handshake**: wire version + `mod8p` capability key, vanilla-peer accept, over-cap refusal and spectator demotion. See the archived 2026-08-09 session-log entry |
 | `scenes/local_game/script/local_game.gd` | — | couch mode's own playlist generator — the **unconditional** cutscene filter (no vanilla peers by definition); see "The first sanctioned exception" |
-| `scripts/scenes/game/game.gd` | 3, 19, 24 | **roster-scaled payout in `_on_minigame_player_score_finalized()`**, playlist filtering + fallback, **Arcade-branch cap filter + clamp (v1.5.0)**, **all-modded-only cutscene filter**, `-minigame` pin, round-count resolution, `[ROUNDS8] load`, **load-gate re-check on peer disconnect (pitfall 32, 2026-08-15)** |
+| `scripts/scenes/game/game.gd` | 3, 19, 24, 26 | **roster-scaled payout in `_on_minigame_player_score_finalized()`**, **synchronizer send-rate cap above four players (`_mod_on_node_added`)**, playlist filtering + fallback, **Arcade-branch cap filter + clamp (v1.5.0)**, **all-modded-only cutscene filter**, `-minigame` pin, round-count resolution, `[ROUNDS8] load`, **load-gate re-check on peer disconnect (pitfall 32, 2026-08-15)** |
 | `scripts/scenes/game/states/minigame_playing_state.gd` | 19 | the **replay gate** — second round-count site |
 | `scripts/components/character customization/customization_assigner.gd` | 4 | suit tinting |
 | `scenes/bootstrap/scripts/bootstrap.gd` | 8 | `-localtest`, `-fullflow` |

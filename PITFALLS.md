@@ -459,4 +459,20 @@ dated *session-log entry* lives in `SESSION-LOG.md` (or
     tall props, effects, and anything that moves. Same lesson as pitfall 28
     from the other side: there the camera's axes were misread, here its line
     of sight was.
+40. **The game keeps only five logs, and every test launch rotates one out -
+    including the only record of a real session.** File logging is on in the
+    shipped build: `user://logs/godot.log` plus four timestamped predecessors
+    (`%APPDATA%/Godot/app_userdata/Machine Party/logs/` on Windows,
+    `~/.local/share/godot/app_userdata/Machine Party/logs/` on Linux), with
+    stdout and stderr interleaved - which the harness's separate redirects are
+    not. A `testgame/` copy shares that folder with the Steam install because
+    it shares the project name, so an eight-instance run destroys every older
+    log, and instances that are force-killed leave theirs truncated. On
+    2026-11-10 a real six-player session's log survived only because it was
+    the most recent file when someone thought to look; it turned out to be the
+    best evidence the project has had about play at 5-8 (§26). **Before any
+    harness run on a machine that also plays the game, copy that folder
+    aside**, and ask a reporter for their `godot.log` before asking them
+    anything else - it names the renderer, the mod version and every error,
+    in order.
 ---
