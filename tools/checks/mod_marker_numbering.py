@@ -38,7 +38,9 @@ def main() -> int:
     suspicious = []
     total = 0
     for f in sorted(glob.glob(os.path.join(root, "mod", "**", "*.tscn"), recursive=True)):
-        rel = os.path.relpath(f, root)
+        # Forward slashes always: WHITELIST is written that way, and on Windows
+        # relpath() returns backslashes, which made every whitelisted node fail.
+        rel = os.path.relpath(f, root).replace(os.sep, "/")
         with open(f, encoding="utf-8", errors="replace") as fh:
             for n, line in enumerate(fh, 1):
                 m = NODE.search(line)
