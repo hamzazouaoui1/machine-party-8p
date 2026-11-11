@@ -22,7 +22,13 @@ const Epsilon: float = 0.001
 # and game_version their concatenation. That extends the existing three-places
 # rule for the version label - globals.gd, installer/install.py and
 # installer/README.txt still all have to agree on game_version.
-var game_version: String = "v2.1.2-8P-v1.6-fork"
+#
+# This fork's label opens with a credit, "fork by zip ", ahead of that
+# concatenation. It is display text only: the label is drawn bottom-right
+# aligned with no clipping, so the extra length grows leftwards, and neither
+# wire constant below includes it - a build with and without the credit are
+# the same build to the handshake.
+var game_version: String = "fork by zip v2.1.2-8P-v1.6-fork"
 const MOD_NETWORK_GAME_VERSION := "v2.1.2"
 const MOD_SUFFIX := "8P-v1.6-fork"
 

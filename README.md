@@ -20,8 +20,8 @@ is an overlay of 57 files (41 `.gd`, 16 `.tscn`) applied to the shipped
 `Machine Party.pck`: one file is new, the rest replace shipped ones.
 
 This is mod release **v1.6-fork**, a fork of upstream's v1.5; in game it
-identifies itself as **`v2.1.2-8P-v1.6-fork`** — game version, mod suffix, mod
-release. It and upstream builds refuse each other in a lobby, by design: it
+identifies itself as **`fork by zip v2.1.2-8P-v1.6-fork`** — a credit, then game
+version, mod suffix, mod release. It and upstream builds refuse each other in a lobby, by design: it
 changes scoring and one minigame's layout, so everyone in a 5-8 lobby needs
 this same build.
 
@@ -94,7 +94,7 @@ silently reverts the mod the same way, so re-run the installer after one.
 
 ### Verify
 
-`Globals.game_version` becomes `v2.1.2-8P-v1.6-fork`, and that string is already wired to
+`Globals.game_version` becomes `fork by zip v2.1.2-8P-v1.6-fork`, and that string is already wired to
 the main menu's version label, so the corner of the menu is the fastest check.
 
 Without launching:

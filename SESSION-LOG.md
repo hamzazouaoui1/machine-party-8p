@@ -13,7 +13,30 @@ Section names cited bare — "Current status", "Open items", *Testing*, the
 "Update procedure" steps — are sections of `UPDATING.md`; *pitfall N* is
 `PITFALLS.md`, *§N* is `MINIGAMES.md`.
 
-### 2026-11-10 (latest) — Synchronizer send-rate cap above four players, from a real six-player session log (still v1.6-fork, unreleased)
+### 2026-11-10 (latest) — Menu label opens with a credit: `fork by zip v2.1.2-8P-v1.6-fork` (display only; still v1.6-fork)
+
+Maintainer request. `game_version` in `globals.gd` gains the prefix
+`fork by zip `; the wire constants (`MOD_NETWORK_GAME_VERSION`, `MOD_SUFFIX`)
+are untouched, so a build with the credit and the build pushed earlier today
+are the same build to the handshake and join each other. The three places
+that must agree on the label were changed together (`globals.gd`,
+`install.py`'s `--verify` message, `installer/README.txt`), and
+`tools/checks/version_strings.py` now accepts a credit and a space ahead of
+`MOD_NETWORK_GAME_VERSION + "-" + MOD_SUFFIX` while still comparing the whole
+label across the three.
+
+| Check | Result |
+|---|---|
+| Where the label is drawn, read from the shipped `main_menu.scn` | `VersionMargin/VersionLabel`: full-rect, right- and bottom-aligned, font size 16, no clipping or autowrap - a longer string grows leftwards from the corner |
+| Other readers of `game_version` | `main_menu.gd` (the label), the `Running version:` print, and the default `self_data` in `multiplayer_backend.gd`, which both backends replace before anything is sent |
+| `tools/checks/*.py` | all five pass; label reported as `fork by zip v2.1.2-8P-v1.6-fork` |
+| Test pck rebuilt, `install.py --verify` | `PATCHED - all 57 mod files present`; the `globals.gd` stored in it is byte-identical to `mod/autoloads/globals.gd` |
+
+**Not verified:** the game was not launched for this change (the maintainer
+asked for no game launches), so neither the `Running version:` line nor the
+menu itself has been seen with the new text.
+
+### 2026-11-10 — Synchronizer send-rate cap above four players, from a real six-player session log (still v1.6-fork, unreleased)
 
 Report: a player on a Mac saw "visual bugs and players teleporting", **only
 with the mod**. No Mac was available. The mod has no platform checks and no

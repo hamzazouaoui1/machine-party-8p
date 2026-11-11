@@ -8,7 +8,9 @@ minigames stale). The wire constants are a separate pair that only
 globals.gd holds. This script enforces:
 
   1. globals.gd internal consistency:
-     game_version == MOD_NETWORK_GAME_VERSION + "-" + MOD_SUFFIX
+     game_version == MOD_NETWORK_GAME_VERSION + "-" + MOD_SUFFIX, optionally
+     after a display-only credit and a space ("fork by zip v2.1.2-8P-...").
+     Everything below compares the whole label, credit included.
   2. install.py: SUPPORTED_VERSION == MOD_NETWORK_GAME_VERSION, and the
      --verify message resolves to the full display string.
   3. installer/README.txt: contains both the full display string and a
@@ -60,7 +62,8 @@ def main() -> int:
     failures = []
 
     expected_display = f"{net_version}-{suffix}"
-    if game_version != expected_display:
+    if (game_version != expected_display
+            and not game_version.endswith(" " + expected_display)):
         failures.append(
             f"globals.gd: game_version is \"{game_version}\" but "
             f"MOD_NETWORK_GAME_VERSION + '-' + MOD_SUFFIX is \"{expected_display}\"")

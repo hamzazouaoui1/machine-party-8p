@@ -953,9 +953,11 @@ In code — these change behaviour, so they are the ones that break things:
   - `MOD_SUFFIX` → the mod's own release tag, `"8P-v<modrelease>"`. The backends
     put it on the wire under the `mod8p` key, so it is also what distinguishes a
     modded peer from a vanilla one and from an older mod build.
-  - `game_version` → their concatenation, the display string; currently
-    `v2.1.2-8P-v1.6-fork`. A game update bumps only the game part — **carry the mod
-    release label across unchanged** unless the mod itself is being released anew.
+  - `game_version` → their concatenation, the display string, which in this
+    fork opens with the credit `fork by zip ` (display only, never on the
+    wire); currently `fork by zip v2.1.2-8P-v1.6-fork`. A game update bumps
+    only the game part — **carry the credit and the mod release label across
+    unchanged** unless the mod itself is being released anew.
 - `installer/install.py` → `SUPPORTED_VERSION = "v<new>"`
 - `installer/install.py` → `verify()`'s printed message **hardcodes the same
   display string**. It is the second place the label lives and it does not derive
@@ -1070,8 +1072,8 @@ Plain boot test (should run the full timeout with no script errors):
 cd testgame
 timeout 25 stdbuf -o0 -e0 ./"Machine Party.x86_64" --windowed --resolution 960x540 2>&1 | grep -E "Running version|SCRIPT ERROR|Parse Error"
 ```
-Should print `Running version: v<new>-8P-v<modrelease>` — currently
-`v2.1.2-8P-v1.6-fork` (mod release v1.6-fork, 2026-11-09).
+Should print `Running version: fork by zip v<new>-8P-v<modrelease>` — currently
+`fork by zip v2.1.2-8P-v1.6-fork` (mod release v1.6-fork, 2026-11-09).
 
 ### Eight local clients
 

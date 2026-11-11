@@ -507,7 +507,8 @@ def verify(game_dir):
     if state == "patched":
         print(f"\n  PATCHED - all {len(overlay)} mod files present, "
               f"originals correctly removed.")
-        print(f"  In game, the main menu should read {SUPPORTED_VERSION}-8P-v1.6-fork")
+        print(f"  In game, the main menu should read "
+              f"fork by zip {SUPPORTED_VERSION}-8P-v1.6-fork")
         return 0
     if state == "clean":
         print("\n  NOT PATCHED - this is the original game.")
