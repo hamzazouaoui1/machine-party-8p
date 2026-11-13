@@ -260,9 +260,14 @@ is in git, `<old mod>` is just `git show <last-release-tag>:mod/$f`.
 
 ## Current status (read this first)
 
-**v1.6-fork (2026-11-09) is the current mod release, built against game
-v2.1.2.** It is a fork of upstream's v1.5 (2026-08-16, still upstream's latest
-on 2026-11-09) and carries its own wire label, `8P-v1.6-fork`, so it and any
+**v1.7-fork (2026-11-13) is the current mod release, built against game
+v2.1.2.** It follows v1.6-fork (2026-11-09) with three fixes from the next
+round of player reports - The Filter's rooms merge for a single winner (§21),
+the points are explained above four players (§27), and lobby players 5-8 sit
+on chairs of their own (§6) - and refuses it, wire label `8P-v1.7-fork`,
+because the merge adds an RPC. v1.6-fork was the fork's first release: a fork
+of upstream's v1.5 (2026-08-16, still upstream's latest on 2026-11-09) with
+its own wire label, `8P-v1.6-fork`, so it and any
 upstream build refuse each other rather than desync - it adds an RPC and
 changes host-side scoring. What it changed, from the first reports by people
 who actually played 5-8 player sessions: survival-order minigames pay on the
@@ -309,7 +314,7 @@ confused in this file: **Wrong Way is `EscalatorPit`, Stable Footing is
 | LETHAL REBOUND | `DvdRoomba` | 8 spawns; no gameplay edit — hazard count does not scale with the roster, by design | 16 |
 | DUCK HUNT | `DuckHunt` | uncapped 2026-08-02: 7 runtime duck markers above four, magazine curve to 7, 8 hunter turns not 16; disconnect-during-load fix (pitfall 32) | 19 |
 | FORKLIFT CERTIFIED | `ForkliftCertified` | uncapped 2026-08-04: four runtime mid-edge delivery zones (RPC, every peer) and four runtime markers (host-only), crate sampler given the free centre cell and a reachable target, blood pool refills | 20 |
-| THE FILTER | `BurnRecycle` | uncapped 2026-08-07 as **two rooms** rather than eight stations: balanced (5→3+2, 7→4+3), per-room elimination at vanilla pace, global scoring with same-round ties resolved upward | 21 |
+| THE FILTER | `BurnRecycle` | uncapped 2026-08-07 as **two rooms** rather than eight stations: balanced (5→3+2, 7→4+3), per-room elimination at vanilla pace, global scoring with same-round ties resolved upward; **since 2026-11-13 the rooms merge once four or fewer are left, for a single winner** | 21 |
 | FIREARM FACTORY | `ManufactureGun` | uncapped 2026-08-07: 8 runtime mid-edge spawns and workstations, wall desks turned and pushed out, roster-scaled ingredients, recipe projection raised | 22 |
 
 All fifteen also carry the pre-start disconnect guard (§23). `ShapeCutter`,
@@ -619,7 +624,7 @@ see step 5 of the update procedure. The "§" column is the section of
 | `minigames/spine_breaker/*` (2) | 16, 18, 23, 24 | spawn audit + roster-scaled kill pace; death timestamps for tied placements |
 | `minigames/duck_hunt/*` (2) | 19 | runtime markers, magazine curve, animation fit, **`debug_skip_brief` reveal-skip repair (`can_aim` + overlay)**, **pre-start disconnect guard (pitfall 32)** |
 | `minigames/forklift_certified/*` (2) | 20, 23 | runtime mid-edge delivery zones + markers, crate spawn region and target, blood-decal pool refill |
-| `minigames/burn_recycle/*` (2) | 21, 23 | **two-room layout**, balanced rooms, per-room elimination, tie-corrected scoring |
+| `minigames/burn_recycle/*` (2) | 21, 23 | **two-room layout**, balanced rooms, per-room elimination, **rooms merge for a single-winner final**, tie-corrected scoring |
 | `minigames/manufacture_gun/*` (1) | 22, 23 | **runtime mid-edge spawns + workstations**, wall-desk turn + slide + **wall push (`MOD_WALL_DESK_PUSH`)**, `empty_desk_array` bounds guard, `spawn_limit` raise by property write, roster-scaled ingredients at **`MOD_ITEM_SPREAD` 1.10**, **ingredient projection raised by its own measured height (RPC, all peers)** |
 | `minigames/disco_dodge/*` (2) | 10, 16, 23, 24 | `spawn_limit` 4→8 (inert — see §10), `[DISCO8]`; death timestamps for tied placements |
 | `minigames/junk_platform/*` (2) | 15, 23, 24 | **runtime platform ring above four players** (RPC, every peer), ring spawns, roster-scaled debris pool, self-clearing collapsed platforms; death timestamps. The `.tscn` still carries four `_MOD` markers that nothing reads any more |
@@ -956,7 +961,7 @@ In code — these change behaviour, so they are the ones that break things:
     modded peer from a vanilla one and from an older mod build.
   - `game_version` → their concatenation, the display string, which in this
     fork opens with the credit `fork by zip ` (display only, never on the
-    wire); currently `fork by zip v2.1.2-8P-v1.6-fork`. A game update bumps
+    wire); currently `fork by zip v2.1.2-8P-v1.7-fork`. A game update bumps
     only the game part — **carry the credit and the mod release label across
     unchanged** unless the mod itself is being released anew.
 - `installer/install.py` → `SUPPORTED_VERSION = "v<new>"`
@@ -1074,7 +1079,7 @@ cd testgame
 timeout 25 stdbuf -o0 -e0 ./"Machine Party.x86_64" --windowed --resolution 960x540 2>&1 | grep -E "Running version|SCRIPT ERROR|Parse Error"
 ```
 Should print `Running version: fork by zip v<new>-8P-v<modrelease>` — currently
-`fork by zip v2.1.2-8P-v1.6-fork` (mod release v1.6-fork, 2026-11-09).
+`fork by zip v2.1.2-8P-v1.7-fork` (mod release v1.7-fork, 2026-11-13).
 
 ### Eight local clients
 

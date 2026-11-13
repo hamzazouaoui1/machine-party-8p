@@ -40,10 +40,15 @@ enum ItemTypes{
 #
 # Scoring stays GLOBAL - a player's score is their place in the overall
 # elimination order, not their place within their room - with same-round
-# eliminations tied upward; see `mod_death_score`. Both room winners take the
-# full `player_count`, which is a deliberate accepted asymmetry at odd rosters:
-# at seven, room B's winner outlasts two players and room A's outlasts three,
-# and both score seven.
+# eliminations tied upward; see `mod_death_score`.
+#
+# The two rooms MERGE for the end (since 2026-11-13). Until then each room
+# crowned its own winner, so a 5-8 game ended with two winners, and nobody
+# ever saw the other half of the lobby. Now, once the survivors fit in one
+# room (four or fewer), room B's survivors move into room A's free stations,
+# every eliminated player is cleared away, and the eliminated watch through a
+# finalist's camera; the final is vanilla's rule, played to ONE winner. See
+# `_mod_merge_rooms()` and MINIGAMES.md section 21.
 const MOD_SEATS_PER_ROOM: int = 4
 const MOD_MAX_ROOMS: int = 2
 # Far enough that nothing of room A is in frame from room B. Nothing renders in
@@ -79,6 +84,8 @@ const MOD_ROOM_SUBTREES: Array[String] = [
 
 var mod_room_count: int = 1
 var mod_rooms_built: bool = false
+# True on every peer once the survivors have been gathered into room A.
+var mod_merged: bool = false
 var mod_extra_timer_labels: Array[Label3D] = []
 
 # 8P MOD: network_id -> the score that player is owed for being eliminated.
@@ -418,10 +425,11 @@ func spawn_players():
 		active_players[player_presence.network_id] = player_character
 
 		player_character.item_queue_cleared.connect(_on_player_queue_cleared)
-		# 8P MOD: the signal carries only (rotation, type), so the room is bound
-		# at connect time - the handler otherwise has no way to know which room
-		# the thrower is in, and would launch every picture in room A.
-		player_character.item_launched.connect(_on_item_launched.bind(mod_room))
+		# 8P MOD: the signal carries only (rotation, type), so the THROWER is
+		# bound at connect time and the handler reads its room when the picture
+		# flies - a room bound here would go stale when the rooms merge, and
+		# a room-B survivor's pictures would keep landing in the empty room.
+		player_character.item_launched.connect(_on_item_launched.bind(player_character))
 
 		counter += 1
 
@@ -468,15 +476,18 @@ func check_game_end(from_disconnect: bool = false):
 	if finished:
 		return
 
-	# 8P MOD: vanilla asks "is more than one player still alive?", which with two
-	# rooms would keep running until one of the EIGHT remained - the whole point
-	# of splitting is that each room resolves its own winner. The game is over
-	# once every room is down to one (or none); a room that got there first just
-	# has nothing left to eliminate.
-	if _mod_any_room_contested():
+	# Vanilla's test, unchanged: the game goes on while more than one player is
+	# alive anywhere. Until 2026-11-13 this asked whether any ROOM was still
+	# contested, which ended a 5-8 game with one winner per room.
+	if active_players.size() > 1:
 		if from_disconnect:
 			return
 		else:
+			# 8P MOD: between rounds, once the survivors fit in one room, they
+			# are gathered into it before the next round starts. Never from a
+			# disconnect, which arrives mid-round with items still in flight.
+			if _mod_should_merge():
+				await _mod_merge_rooms()
 			elimination_finished.emit()
 			return
 
@@ -490,12 +501,10 @@ func check_game_end(from_disconnect: bool = false):
 	for i in dead_players.size():
 		player_scores[dead_players[i]] = mod_death_score.get(dead_players[i], i)
 
-	# 8P MOD: the `break` that was here scored only the FIRST survivor. With one
-	# room that is harmless - there is never a second - but with two rooms it
-	# silently dropped a winner from `player_scores` entirely, and since
-	# game.gd's merge is `+=` keyed on network id, that player would simply have
-	# scored nothing for the minigame with no error anywhere. Both room winners
-	# are survivors and both are scored.
+	# 8P MOD: vanilla had a `break` here that scored only the FIRST survivor.
+	# There is only ever one survivor again now that the rooms merge for the
+	# end, so the loop and the break agree; the loop stays because a survivor
+	# missing from `player_scores` would score nothing with no error anywhere.
 	for network_id in active_players.keys():
 		player_scores[network_id] = player_count
 
@@ -520,11 +529,125 @@ func _mod_active_in_room(room: int) -> Array:
 			out.append(player)
 	return out
 
-func _mod_any_room_contested() -> bool:
-	for room in mod_room_count:
-		if _mod_active_in_room(room).size() > 1:
-			return true
-	return false
+func _mod_should_merge() -> bool:
+	return (mod_room_count > 1 and not mod_merged
+		and active_players.size() <= MOD_SEATS_PER_ROOM)
+
+# Host only, between rounds. Room A's survivors keep their stations, so nothing
+# moves under them; room B's survivors take room A's free stations in order.
+# Four or fewer survivors always fit, which is what _mod_should_merge() waits
+# for. Everything visible happens in the RPC, on every peer.
+func _mod_merge_rooms() -> void:
+	var stations: Dictionary[int, int] = {}
+	var taken: Array[int] = []
+	for network_id in active_players.keys():
+		var player: BurnRecyclePlayer = active_players[network_id]
+		if _mod_room_of(player) == 0:
+			stations[network_id] = player.active_seat_index
+			taken.append(player.active_seat_index)
+	var free_station: int = 0
+	for network_id in active_players.keys():
+		if stations.has(network_id):
+			continue
+		while taken.has(free_station):
+			free_station += 1
+		stations[network_id] = free_station
+		taken.append(free_station)
+
+	zz_mod_merge_rooms_rpc.rpc(stations)
+	# A beat for everyone to take in the new room before items start arriving.
+	await get_tree().create_timer(1.0).timeout
+
+# The `zz_` prefix is load-bearing (pitfall 30): every mod RPC must sort after
+# the vanilla ones so vanilla's wire ids stay identical. Only ever sent with
+# two rooms built, i.e. above four players.
+@rpc("authority", "call_local", "reliable")
+func zz_mod_merge_rooms_rpc(_stations: Dictionary) -> void :
+	mod_merged = true
+
+	# `players` is filled by spawn_players(), which is host-only, so every
+	# peer finds the player nodes itself.
+	var by_id: Dictionary[int, BurnRecyclePlayer] = {}
+	for child in player_parent_node.get_children():
+		var p: BurnRecyclePlayer = child as BurnRecyclePlayer
+		if p != null and p.player_presence != null:
+			by_id[p.player_presence.network_id] = p
+
+	# The eliminated are cleared away, whole: the player scene carries its
+	# station's levers and piston, so a body left behind would stack a second
+	# console on the survivor who takes its place.
+	for p in by_id.values():
+		if p.is_dead:
+			p.visible = false
+
+	# Room A stations whose own player survived, read BEFORE anyone moves: a
+	# newcomer's new station is not one of these, and its press is still down
+	# and its blood still up from the player who died there.
+	var stayed: Array[int] = []
+	for network_id in _stations.keys():
+		var p: BurnRecyclePlayer = by_id.get(int(network_id))
+		if p != null and p.mod_room == 0:
+			stayed.append(p.active_seat_index)
+
+	# Survivors, at room A stations. Rotation is vanilla's 90 degrees per seat.
+	var survivors: Array[BurnRecyclePlayer] = []
+	for network_id in _stations.keys():
+		var p: BurnRecyclePlayer = by_id.get(int(network_id))
+		if p == null:
+			continue
+		var station: int = int(_stations[network_id])
+		p.mod_room = 0
+		p.position = Vector3.ZERO
+		p.rotation_degrees = Vector3(0.0, 90.0 * (station % MOD_SEATS_PER_ROOM), 0.0)
+		p.set_active_belt(station)
+		p.set_active_press(station)
+		p.anim_camera_movement.play("look " + BurnRecyclePlayer.MOD_LOOK_CLIPS[0])
+		survivors.append(p)
+	survivors.sort_custom(func(a, b): return a.active_seat_index < b.active_seat_index)
+
+	# Every room A station without a survivor of its own gets its press back up
+	# and its blood cleaned, whether a newcomer sits there now or nobody does.
+	var cleaned: Array[int] = []
+	for press in presses:
+		if press.press_id < MOD_SEATS_PER_ROOM and not stayed.has(press.press_id):
+			if press.anim_press.has_animation(&"RESET"):
+				press.anim_press.play(&"RESET")
+			for decal in press.decals:
+				decal.visible = false
+			cleaned.append(press.press_id)
+
+	# This peer's view. Vanilla's per-viewer setup lights the room and shows
+	# the neighbour's tally; it is re-run for whoever this peer now watches,
+	# after clearing what the old seating lit. An eliminated player watches
+	# the first finalist, through that finalist's own camera.
+	for p in by_id.values():
+		p.end_score_labels[0].position = Vector3(0, -100, 0)
+	for ind in indicators:
+		if ind.get_child_count() > 0:
+			(ind.get_child(0) as Node3D).visible = false
+	var me: BurnRecyclePlayer = by_id.get(multiplayer.get_unique_id())
+	var view: BurnRecyclePlayer = me
+	if (me == null or me.is_dead) and not survivors.is_empty():
+		view = survivors[0]
+		view.camera.current = true
+		view.player_name_label.visible = false
+		view.score_parent.visible = true
+		view.score_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+		view.score_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	if view != null:
+		view.mod_apply_viewer_visuals(view.active_seat_index)
+
+	if Array(OS.get_cmdline_args()).has("-localtest"):
+		var seats: Array[String] = []
+		for p in survivors:
+			seats.append("%d@%d" % [p.player_presence.network_id, p.active_seat_index])
+		print("[FILTER8] merge is_server=", multiplayer.is_server(),
+			" peer=", multiplayer.get_unique_id(),
+			" survivors=[", ", ".join(seats), "]",
+			" cleared=", by_id.size() - survivors.size(),
+			" stayed=", stayed, " cleaned=", cleaned,
+			" view=", view.player_presence.network_id if view != null else -1,
+			" spectating=", view != me)
 
 # 8P MOD: the shipped rule, unchanged, applied to ONE room's players. Returns the
 # player to eliminate, or null. Kept as its own function so the two rooms cannot
@@ -602,7 +725,7 @@ func eliminate_players():
 		print("[FILTER8] eliminate victims=", mod_victims.size(),
 			" alive_by_room=[", ", ".join(mod_report), "]",
 			" dead_total=", dead_players.size(),
-			" contested=", _mod_any_room_contested())
+			" alive=", active_players.size())
 
 	await get_tree().create_timer(2.0).timeout
 
@@ -688,10 +811,12 @@ func update_timers_rpc(_time_remaining: int):
 
 
 
-# 8P MOD: `mod_room` is bound at connect time in spawn_players(); it is 0 for
-# every player at 1-4, making this identical to vanilla there.
+# 8P MOD: the thrower is bound at connect time in spawn_players(); its room is
+# 0 for every player at 1-4, making this identical to vanilla there.
 func _on_item_launched(_rotation: Vector3, _type: BurnRecycleMinigame.ItemTypes,
-		mod_room: int = 0):
+		thrower: BurnRecyclePlayer = null):
+
+	var mod_room: int = thrower.mod_room if thrower != null else 0
 
 	var launch_item: BurnRecycleLaunchedItem
 	for li in item_parent_node.get_children():

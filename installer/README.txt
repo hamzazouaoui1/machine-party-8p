@@ -21,7 +21,8 @@ and unmodded players works automatically, caps at 4 players, and plays the
 plain vanilla rotation. A 5th player trying to join a mixed lobby is refused
 with the game's version-mismatch message rather than the game breaking halfway
 through a session. Two different mod releases always refuse each other, so
-modded friends should update together (e.g. v1.5 and v1.6-fork cannot connect).
+modded friends should update together (e.g. v1.6-fork and v1.7-fork cannot
+connect).
 
 
 INSTALL
@@ -66,7 +67,7 @@ DID IT WORK?
 ------------
 Launch the game and look at the version in the corner of the main menu:
 
-  fork by zip v2.1.2-8P-v1.6-fork    <- mod is active
+  fork by zip v2.1.2-8P-v1.7-fork    <- mod is active
   v2.1.2                             <- still the original
 
 Or check without launching:
@@ -130,8 +131,11 @@ WHAT CHANGED
 - SMOKE BREAK: eight seats, with two crates added at the ends of the bench.
 - FORKLIFT CERTIFIED: four more delivery zones, so eight players fit in the
   yard instead of crowding the original four.
-- THE FILTER: a second, identical room. Players are split between the two
-  rooms so nobody is left on their own, and scoring is shared across both.
+- THE FILTER: a second, identical room. Players start split between the two
+  rooms so nobody is left on their own. Once four or fewer are left, everyone
+  still in moves into one room and it is played out to a single winner;
+  players already knocked out watch through a finalist's eyes. It used to end
+  with one winner per room.
 - FIREARM FACTORY: eight workstations instead of four, and more ingredients to
   go round - previously the same fixed amount was shared however many people
   were playing.
@@ -173,6 +177,8 @@ KNOWN ROUGH EDGES
   watched in a test session but not yet played by a full lobby. If a platform
   looks misplaced, is cut off by the edge of the screen, or its press comes
   down in the wrong spot, that is worth reporting.
+- THE FILTER's merge into one room for the last four is new. It has been
+  watched in test sessions but not yet played by a real lobby.
 - In a full lobby, players can spawn touching and visibly push apart for an
   instant at the start of a minigame. It settles immediately.
 - The lobby's 8 character previews have been tested for loading but never seen

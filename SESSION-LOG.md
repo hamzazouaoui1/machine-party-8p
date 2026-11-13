@@ -13,7 +13,43 @@ Section names cited bare — "Current status", "Open items", *Testing*, the
 "Update procedure" steps — are sections of `UPDATING.md`; *pitfall N* is
 `PITFALLS.md`, *§N* is `MINIGAMES.md`.
 
-### 2026-11-10 (latest) — Menu label opens with a credit: `fork by zip v2.1.2-8P-v1.6-fork` (display only; still v1.6-fork)
+### 2026-11-13 (latest) — v1.7-fork: The Filter's rooms merge for one winner, points explained above four players, a chair per lobby seat
+
+Three reports from real 5-8 lobbies, and the maintainer's choices on them:
+The Filter "ends by having two winners" and "you can't see the other half"
+(chosen: merge into one room for the end, §21); players "don't understand how
+the points are split" (chosen: what each player earned and their place on the
+score screen, plus how every minigame's points are calculated, shown before
+it; §27); and in the lobby players 5-8 "end up sitting on other players"
+(a chair per player, §6). The merge adds an RPC, so the wire label moves to
+`8P-v1.7-fork` and this build refuses v1.6-fork rather than misroute.
+
+| Check | Result |
+|---|---|
+| 8 players, FLOW, The Filter, one client's own rendered frames (scratch capture build, never in `mod/`) - briefing | `POINTS`, `Page 3/3`, ladder `1st 340 ... 8th 0`, tie line, all inside the panel |
+| same run - merge, `[FILTER8] merge` on all 8 peers | identical `survivors=[a@0, b@1, c@2, d@3] cleared=4` everywhere; the 4 survivors `spectating=false` viewing themselves, the host and 3 eliminated clients `spectating=true` on the station-0 finalist |
+| same run - eliminations, host | per match `6 -> 4` (two split rounds), merge, then `3 -> 2 -> 1`; both matches ended with **one** survivor |
+| same run - frames across the merge | before: the eliminated client's own crushed station; after: a finalist's seat with the other three finalists at the three other stations of one room, no stacked consoles |
+| same run - **bug found in those frames** | blood and a lowered press on a newcomer's console: the stations to clean were computed after the reseat, so newcomers' stations counted as kept. Fixed - computed from where survivors sat before anyone moved - and traced as `stayed=` / `cleaned=` |
+| same run - score screen | `+553 1st`, `+510 2nd`, `+383 3rd` x2, `+256 5th` x2, `+213 7th`, `+86 8th` beside the names; every sum a pair of the match payouts (43, 128, 170, 213, 255, 340) |
+| same run - errors | only documented classes: round-transition churn (`Node not found` / `Invalid packet` / `Failed to get cached node` / `Failed to get path`), `ERR_UNAUTHORIZED` despawn churn, the vanilla `update_playlist_state_rpc` arity bug, `data.tree` |
+| Lobby seats, offline | each new seat a rigid copy of vanilla seat 2; the method reproduces Player2's baked armature and nametag to 3e-16; re-parsed scene puts every new hips 0.3067 from its chair, 0.6598 above it, exactly as Player2 |
+| 5 players, START, The Filter (3+2), after the fix, three matches | every match: `2+1`, merge, `3 -> 2 -> 1`; all 5 peers print the same `survivors`, `stayed=[1, 2] cleaned=[3, 0]` (or `[0, 1]` / `[2, 3]`); the capturing client was the newcomer and its frames after the merge show a clean console, press up, pictures arriving on its belt, and the two room A survivors at their stations |
+| 4 players, FLOW, The Filter - 1-4 parity | no `rooms` line (room B never built), no `merge` line, single-room eliminations `3 -> 2 -> 1`; `[BRIEF8]`/`[SCORE8]` `rows=4 scale=1.000 expanded=false` on all peers; the client's frames show the briefing ending on the game's own page (`Page 2/2`, no POINTS page) and score rows with no tag |
+| Error kinds, 4 vs 5 vs 8 (filtered as UPDATING.md prescribes) | only at 5/8: `ERR_UNAUTHORIZED` despawn churn and `data.tree` (open item 5), both documented; nothing new from this change |
+| Lobby, `tools/lobby_preview/` build, Steam lobby hosted by the maintainer, game's own frame | all eight on their own chairs, nametags above their sitters, nobody on anybody; P5's legs behind P3 from the camera is the only overlap |
+| `testgame/` afterwards | rebuilt as the plain mod build: `install.py --verify` PATCHED, 57 files, `globals.gd` in the pck byte-identical to `mod/` |
+| `tools/checks/*.py` | all five pass (10 mod RPCs, label `fork by zip v2.1.2-8P-v1.7-fork`) |
+
+**Not verified:** any of it with real people. The merge and the score tags
+were exercised by idle instances (all zero scores, so eliminations were the
+random-zero-scorer rule); the lobby chairs have been seen only with slots
+forced visible, not filled by eight real joiners (open item 3). The POINTS
+pages were looked at for The Filter only; the other fourteen are the same
+code path with different lines, checked against each minigame's scoring code
+rather than on screen.
+
+### 2026-11-10 — Menu label opens with a credit: `fork by zip v2.1.2-8P-v1.6-fork` (display only; still v1.6-fork)
 
 Maintainer request. `game_version` in `globals.gd` gains the prefix
 `fork by zip `; the wire constants (`MOD_NETWORK_GAME_VERSION`, `MOD_SUFFIX`)

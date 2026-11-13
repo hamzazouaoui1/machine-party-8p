@@ -227,7 +227,12 @@ func zz_mod_set_room_rpc(_room: int) -> void :
 
 func setup_clientside_visuals(_seat_counter: int):
 	await get_tree().create_timer(1, false).timeout
+	mod_apply_viewer_visuals(_seat_counter)
 
+# 8P MOD: the body of vanilla's setup_clientside_visuals(), after its one-second
+# wait, split out unchanged so the room merge can re-run it at once for
+# whoever a peer now watches (burn_recycle.gd, zz_mod_merge_rooms_rpc).
+func mod_apply_viewer_visuals(_seat_counter: int):
 	var seats: int = BurnRecycleMinigame.MOD_SEATS_PER_ROOM
 	var seat_in_room: int = _seat_counter % seats
 

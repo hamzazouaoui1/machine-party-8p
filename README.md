@@ -19,11 +19,18 @@ players, and the lobby, briefing screen and score screen grow to match. The mod
 is an overlay of 57 files (41 `.gd`, 16 `.tscn`) applied to the shipped
 `Machine Party.pck`: one file is new, the rest replace shipped ones.
 
-This is mod release **v1.6-fork**, a fork of upstream's v1.5; in game it
-identifies itself as **`fork by zip v2.1.2-8P-v1.6-fork`** — a credit, then game
+This is mod release **v1.7-fork**, a fork of upstream's v1.5; in game it
+identifies itself as **`fork by zip v2.1.2-8P-v1.7-fork`** — a credit, then game
 version, mod suffix, mod release. It and upstream builds refuse each other in a lobby, by design: it
 changes scoring and one minigame's layout, so everyone in a 5-8 lobby needs
 this same build.
+
+**What v1.7-fork changed**, from the next round of reports: The Filter's two
+rooms merge once four or fewer players are left, so every match has one
+winner; above four players each minigame's briefing ends with a POINTS page
+and every score-screen row shows what that player just earned and where they
+placed; lobby players 5-8 get chairs of their own. It adds an RPC, so it
+refuses v1.6-fork. Detail in `MINIGAMES.md` sections 6, 21 and 27.
 
 **What v1.6-fork changed**, all from reports by people who played real 5-8
 player sessions: the last-one-standing minigames pay on the 4-player scale
@@ -94,7 +101,7 @@ silently reverts the mod the same way, so re-run the installer after one.
 
 ### Verify
 
-`Globals.game_version` becomes `fork by zip v2.1.2-8P-v1.6-fork`, and that string is already wired to
+`Globals.game_version` becomes `fork by zip v2.1.2-8P-v1.7-fork`, and that string is already wired to
 the main menu's version label, so the corner of the menu is the fastest check.
 
 Without launching:
@@ -177,7 +184,7 @@ and `MinigameReadableNames` in `globals.gd` is the only authoritative map.
 | LETHAL REBOUND | `DvdRoomba` | 8 spawn markers, nothing else. | Hazard count does not scale, by design — eight players share the same roombas in the same arena, which lengthens the round rather than breaking it. |
 | DUCK HUNT | `DuckHunt` | **Uncapped 2026-08-02.** 7 duck spawn markers built at runtime above 4 players; magazine and reload curves extended from 3 ducks to 7 with the rifle animations speed-scaled to fit; splitscreen layouts extended past 4; round pacing set so 8 players run 8 hunter turns, not 16. Two pre-existing vanilla bugs fixed on the way. | Cannot complete unattended — an idle duck never walks home and an idle hunter never shoots — so it stalls automated rotation runs. A test-harness limitation, not something a player sees. |
 | FORKLIFT CERTIFIED | `ForkliftCertified` | **Uncapped 2026-08-04.** `spawn_players()` indexed the spawn markers and the `DropArea` list with one counter, so at 8 it overran both and the minigame loaded to a black screen with the ambience still looping. Four more delivery zones are cloned at runtime at the yard's mid-edges (the shipped four cover only 24% of it), with matching host-only markers. Fixing that exposed two more: the crate sampler looped forever above five players, and the four-decal blood pool ran dry on the 5th elimination and hung the round. | — |
-| THE FILTER | `BurnRecycle` | **Uncapped 2026-08-07 as two rooms, not eight stations in one ring.** Players were told apart by rotation alone (`90 * counter`, which wraps at eight) and belts, presses and indicators were exported arrays of exactly four. Cloning stations 45° round the same ring measured perfectly and looked wrong: the shipped art already fills the ring at four, and the four authored camera clips assume four directions. A second room offset in space keeps every station at the vanilla 90° spacing, so nothing clips and the camera work stays exact. Rooms are balanced (5 → 3+2, 7 → 4+3) so nobody is alone, elimination runs per room at vanilla pace, and scoring stays global with same-round ties resolved upward. | — |
+| THE FILTER | `BurnRecycle` | **Uncapped 2026-08-07 as two rooms, not eight stations in one ring.** Players were told apart by rotation alone (`90 * counter`, which wraps at eight) and belts, presses and indicators were exported arrays of exactly four. Cloning stations 45° round the same ring measured perfectly and looked wrong: the shipped art already fills the ring at four, and the four authored camera clips assume four directions. A second room offset in space keeps every station at the vanilla 90° spacing, so nothing clips and the camera work stays exact. Rooms are balanced (5 → 3+2, 7 → 4+3) so nobody is alone, elimination runs per room at vanilla pace, and scoring stays global with same-round ties resolved upward. **Since 2026-11-13 the rooms merge once four or fewer are left**, so every match ends with one winner instead of one per room, and the eliminated watch the final through a finalist's camera. | — |
 | FIREARM FACTORY | `ManufactureGun` | **Uncapped 2026-08-07.** Four blockers: two 4-marker containers whose null read past index 3 aborted the host's spawn loop, a `queue_free()` on a 4-element array that would have crashed the process, and `spawn_limit = 4`. Eight spawns and eight desks are built at runtime at the arena's mid-edges (there was room — 15.1u between workstations), and ingredients now scale with the roster; they were a fixed 26 at any player count, halving everyone's share at 8. **Polished 2026-08-08:** the two desks against the end walls turned along the wall and pushed flush to it, the doubled ingredients spread far enough apart not to intersect, and the recipe hologram raised clear of the desk that covered it. | — |
 
 ### Not in any playlist

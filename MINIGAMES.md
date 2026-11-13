@@ -1280,7 +1280,7 @@ These exist because screenshots repeatedly proved unreliable. Prefer them.
 | `[ROOMBA8]` | `dvd_roomba.gd` | markers, spawned, live roombas, **`max_roombas`** (scene overrides the script), landing audit |
 | `[FORK8]` | `forklift_certified.gd`, `crate_manager.gd` | `zones` — the delivery zones built on each peer, with every centre; `crate_region` — the free centre cell derived from the zone colliders; `pairing` — the marker/zone pair each player was actually given (they share one index, so a list that grew out of step pairs a player with someone else's zone **silently**); `crates` — requested vs target vs sampler attempts vs points, and `region=vanilla` or `centre_cell`; `rebound` — exported node references re-pointed at each clone's own children (20/20; anything less means a clone is driving the template's border or counter); `plates` — faked bay plates built; `fit` — the side zones' z-shift and where their readouts landed; `spawned` — per peer, the forklifts, the zones and how many zones have an owner. `added=0 (vanilla)`, `region=vanilla` and `zones=4` at <= 4 players are the vanilla-parity gates |
 
-| `[FILTER8]` | `burn_recycle.gd` | `rooms` — per peer: `is_server`, `peer`, `rooms`, `subtrees=n/5` — **`4/5` is the complete result under v2.1.2**: `MOD_ROOM_SUBTREES` names five nodes and the shipped scene no longer has `burn recycle visuals blockout` (v1.5.0 did); judge room B by `belts`/`presses`/`indicators`/`timer_labels` — `belts`, `presses`, `indicators`, `timer_labels`; `eliminate` — `victims` this round, `alive_by_room=[r0=…, r1=…]`, `dead_total` and `contested`. `rooms=1` at <= 4 players is the vanilla-parity gate — room B is never built there |
+| `[FILTER8]` | `burn_recycle.gd` | `rooms` — per peer: `is_server`, `peer`, `rooms`, `subtrees=n/5` — **`4/5` is the complete result under v2.1.2**: `MOD_ROOM_SUBTREES` names five nodes and the shipped scene no longer has `burn recycle visuals blockout` (v1.5.0 did); judge room B by `belts`/`presses`/`indicators`/`timer_labels` — `belts`, `presses`, `indicators`, `timer_labels`; `eliminate` — `victims` this round, `alive_by_room=[r0=…, r1=…]`, `dead_total` and `alive`; `merge` — per peer, once: `survivors=[id@station, …]` (all stations 0-3), `cleared` (players hidden), `view` (whose camera this peer now looks through) and `spectating` (true on every eliminated peer). `rooms=1` at <= 4 players is the vanilla-parity gate — room B is never built there, and no `merge` line can appear |
 | `[GUN8]` | `manufacture_gun.gd` | `expand` — host-side, per round: `roster`, `spawns=8 (+4)`, `desks=8 (+4)`, `closest_spawn_pair`, `empty_desks`, and `added=` with every mod desk's **position and yaw**, which is the only way to check `MOD_WALL_DESK_PUSH` from a log; `items` — `markers`, `per_marker` and `total`; `preview raised` — the ingredient projection's measured own height and its resulting y span, printed **inside the RPC so all eight peers report it**. At <= 4 players the parity gates are that `expand` and `preview raised` **do not appear at all** and `items` reads `per_marker=1 total=26` |
 
 A count of **0** in any of these (`chairs=0`, `MISSING <path>`) means a lookup
@@ -1374,9 +1374,49 @@ belt and room A's press — with no error, because `belts[3]` exists.
 
 Elimination is **per room**: each room runs the shipped rule on its own players
 (zero score -> a random zero-scorer dies; non-zero lowest -> only if exactly one
-player holds it, otherwise **nobody** dies). That keeps vanilla's pace — three
-rounds to resolve four players, against the seven a pooled ladder of eight would
-take, doubled again by the minigame's two matches.
+player holds it, otherwise **nobody** dies). That keeps vanilla's pace while
+the lobby is split — one victim per room per round — instead of the seven
+rounds a pooled ladder of eight would take, doubled again by the minigame's
+two matches.
+
+**The rooms merge for the end (since 2026-11-13).** Until then each room
+crowned its own winner and both took the full `player_count`, so a 5-8 game
+ended with **two winners** and nobody ever saw the other half of the lobby —
+the first thing real players reported about this minigame. Now, between
+rounds, once the survivors fit in one room (`active_players.size() <= 4`),
+`_mod_merge_rooms()` gathers them into room A and the game is played out with
+vanilla's own end test (`active_players.size() > 1`), i.e. to **one** winner:
+
+- **Room A's survivors keep their stations**, so nothing moves under them;
+  room B's take room A's free stations in order. `zz_mod_merge_rooms_rpc`
+  carries `network id -> station` and does everything visible on every peer
+  (the host's `players` dict is host-only, so each peer finds the player nodes
+  itself).
+- **Every eliminated player is hidden, whole.** The player scene carries its
+  station's levers, piston and score display, so a body left behind stacks a
+  second console on the survivor who takes its place.
+- **Every room A station whose own player did not survive is cleaned** — press
+  back to its `RESET` pose, blood decals hidden — read from where survivors sat
+  *before* anyone moved. Computing it after the reseat counted the newcomers'
+  new stations as kept: the first test frames showed blood, and a press still
+  down, on a newcomer's console.
+- **The eliminated watch a finalist.** Each eliminated peer makes the
+  lowest-station survivor's own camera current, shows that player's score
+  display and hides their nametag locally, and re-runs vanilla's per-viewer
+  setup for that seat (`mod_apply_viewer_visuals()`, the body of
+  `setup_clientside_visuals()` after its one-second wait, split out so the
+  merge need not wait). Survivors re-run it for themselves, which moves the
+  lights to room A for room B's newcomers and re-points the neighbour tally.
+  When the watched finalist is eliminated, the eliminated keep that view, as
+  any eliminated player does in vanilla.
+- **Pictures fly in the thrower's current room.** `item_launched` is bound to
+  the thrower and the room is read when the picture flies; the room used to be
+  bound at spawn, which would have kept a room-B newcomer's pictures landing
+  in the empty room.
+
+At eight that is two split rounds (4+4 -> 3+3 -> 2+2), then the merge, then
+three rounds in one room, against three before: about five rounds per match.
+At five (3+2) the merge comes after the first round.
 
 Scoring stays **global** — place in the overall elimination order, not within the
 room. Same-round eliminations are tied **upward** to the top of that round's
@@ -1390,10 +1430,10 @@ Measured: `[1, 1, 3, 3, 5, 5, 8, 8]` at eight, `[1, 1, 2, 5, 5]` at five, and
 `[0, 1, 2, 4]` at four, which is vanilla byte for byte. Note nobody scores zero
 at 5-8 any more; last place takes 1.
 
-**Accepted asymmetry at odd rosters.** Both room winners take the full
-`player_count`, so at seven room B's winner outlasts two players and room A's
-outlasts three, and both score seven. Signed off deliberately rather than
-overlooked.
+Those measurements predate the merge, which ends every match with a single
+`player_count` winner; until then two room winners took it, and the old
+"accepted asymmetry at odd rosters" (room B's winner at seven outlasting two
+players, room A's three, both scoring seven) went with it.
 
 #### Roster-gated dispatches, for vanilla-compat (2026-08-09)
 

@@ -284,7 +284,7 @@ dated *session-log entry* lives in `SESSION-LOG.md` (or
     - **The id mismatch misroutes silently.** A mod RPC named `mod_*` sorts
       before most vanilla names, shifting every vanilla id after it by one, so a
       modded peer and an unmodded one disagree about what each id means — at any
-      roster size, with no error. Hence the `zz_` prefix on the 9 mod RPCs:
+      roster size, with no error. Hence the `zz_` prefix on the 10 mod RPCs:
       nothing in vanilla begins with "zz", so they sort **after** every vanilla
       name in their chains and vanilla's ids stay identical to an unmodded build.
       **Any new mod `@rpc` must keep that property**; it is the whole basis of

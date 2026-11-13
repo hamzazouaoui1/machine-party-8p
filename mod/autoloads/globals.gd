@@ -28,9 +28,9 @@ const Epsilon: float = 0.001
 # aligned with no clipping, so the extra length grows leftwards, and neither
 # wire constant below includes it - a build with and without the credit are
 # the same build to the handshake.
-var game_version: String = "fork by zip v2.1.2-8P-v1.6-fork"
+var game_version: String = "fork by zip v2.1.2-8P-v1.7-fork"
 const MOD_NETWORK_GAME_VERSION := "v2.1.2"
-const MOD_SUFFIX := "8P-v1.6-fork"
+const MOD_SUFFIX := "8P-v1.7-fork"
 
 
 const GROUP_UI: StringName = "GROUP_UI"
