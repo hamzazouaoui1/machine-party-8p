@@ -100,6 +100,8 @@ WHAT CHANGED
 - Three extra suit colours (orange, cyan, pink) so everyone is distinguishable.
 - A plain text list of player names in the lobby corner, because eight floating
   nametags get hard to read once the characters are packed together.
+- In the lobby, players 5-8 each get a chair of their own. They used to sit on
+  the laps of players 1-4.
 - The score screen and the pre-game briefing screen show all 8 players. They
   previously showed only the top 4 and silently dropped the rest. The score
   screen shows one row per player, so five players get five readable rows

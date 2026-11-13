@@ -403,8 +403,9 @@ the session-log archive has them.**
    Structurally unverifiable locally: `lobby_scene.gd` has 12 `Steam.` call
    sites and its join path is built on Steam lobby callbacks, so the real lobby
    cannot run over ENet. A real 5-player lobby (2026-08-16) exposed the runtime
-   spread stacking seats 2-4 on one chair (issue #14, fixed the same day —
-   players 5-8 now sit on 1-4's laps, placed live in the game; §6). All eight
+   spread stacking seats 2-4 on one chair (issue #14, fixed the same day by
+   seating players 5-8 on 1-4's laps; since 2026-11-13 they have chairs of
+   their own; §6). All eight
    seats have been looked at with every slot forced visible in the
    `tools/lobby_preview/` build; the per-slot visibility path with eight real
    joiners has not. Needs a real 8-player Steam session — issue #5.
@@ -520,15 +521,15 @@ deleted during the 2026-08-14 v2.1.2 rebuild; the v1.0.6 generation before that.
 - **`tools/spawn_expand.py`** — rewrites a scene's 4 player-spawn markers into 8.
 - **`tools/lobby_expand.py`** — clones a lobby's 4 character preview slots into
   8 and extends the handler's exported arrays. `PARENT=...` overrides the node
-  path. **Do not re-run it on `lobby_scene.tscn`**: since 2026-08-16 the scene's
-  `Player5`-`Player8` carry hand-placed lap-seat transforms (§6) a run would
+  path. **Do not re-run it on `lobby_scene.tscn`**: the scene's
+  `Player5`-`Player8` carry placed seat transforms and their own chairs (§6) a run would
   overwrite, and its spread step also moves the shipped Player2-4 slots off
   their vanilla positions (rule 3). It remains the bootstrap for a fresh scene
   after an update that ships a new lobby; place the seats afterwards with
   `tools/lobby_preview/`.
 - **`tools/lobby_preview/`** — `build_preview.py` builds the mod pck with a live
   seat-placement mode patched into `lobby_scene.gd` (all eight previews forced
-  visible; keys to select, auto-place on the host's lap, nudge, turn, and print
+  visible; keys to select, nudge, turn (a sitter's chair moves with it), and print
   the exact `.tscn` lines). Output to `testgame/` or the folder given; never
   touches `mod/` or `dist/`. Recipe: Testing, "Placing the lobby previews".
 - **`tools/kill_slot_at_load.sh`** — `SIGKILL`s one localtest joiner the instant
@@ -603,7 +604,7 @@ see step 5 of the update procedure. The "§" column is the section of
 | `scripts/scenes/game/states/minigame_playing_state.gd` | 19 | the **replay gate** — second round-count site |
 | `scripts/components/character customization/customization_assigner.gd` | 4 | suit tinting |
 | `scenes/bootstrap/scripts/bootstrap.gd` | 8 | `-localtest`, `-fullflow` |
-| `scenes/lobby/lobby_scene.tscn`, `scenes/lobby/scripts/lobby_scene.gd` | 6 | 8 seats + 8 preview slots (5-8 hand-placed on 1-4's laps) |
+| `scenes/lobby/lobby_scene.tscn`, `scenes/lobby/scripts/lobby_scene.gd` | 6 | 8 seats + 8 preview slots; **5-8 each on a chair of their own** (`chair_MOD5`-`8` under the slot's `Armature_001`) |
 | `modules/multiplayer_lobby/multiplayer_menu.gd` | 6, 8 | debug-lobby seat map, window tiling, `-original` |
 | `modules/multiplayer_lobby/mod_player_name_list.gd` | 7 | **the only file the mod adds** |
 | `modules/multiplayer/backends/multiplayer_backend.gd` | 8 | window titles P1-P8 |

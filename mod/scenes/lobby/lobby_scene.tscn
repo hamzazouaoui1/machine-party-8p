@@ -2915,7 +2915,7 @@ texture_eye_closed = ExtResource("15")
 character_mesh = NodePath("../Armature_001/Skeleton3D/character mesh")
 
 [node name="Armature_001" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player5/main character2"]
-transform = Transform3D(0.92530936, 0, -0.37921298, 0, 1, 0, 0.37921298, 0, 0.92530936, -4.16983366, 2.38478708, -5.97004032)
+transform = Transform3D(-0.16380389, 0, -0.98649293, 0, 1, 0, 0.98649293, 0, -0.16380389, -7.8059247, 2.045, -1.9350329)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player5/main character2/Armature_001"]
 bones/0/name = "hips"
@@ -3171,13 +3171,18 @@ libraries = {
 autoplay = "lobby_scene_pose_1"
 
 [node name="player nametag" type="Label3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player5/main character2"]
-transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, -2.51363039, 5.71759558, -5.58429003)
+transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, -8.1620788, 4.0013847, -0.87094232)
 billboard = 1
 modulate = Color(1, 1, 1, 0.20392157)
 outline_modulate = Color(0, 0, 0, 0.54901963)
 font = ExtResource("47")
 font_size = 87
 outline_size = 16
+
+[node name="chair_MOD5" type="MeshInstance3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player5/main character2/Armature_001"]
+transform = Transform3D(-0.097100837, 0, -0.99527455, 0, 1, 0, 0.99527455, 0, -0.097100837, 2.1232914, -1.2150999, 0.057420674)
+mesh = SubResource("ArrayMesh_hy16q")
+skeleton = NodePath("")
 
 [node name="Player6" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
@@ -3192,7 +3197,7 @@ texture_eye_closed = ExtResource("15")
 character_mesh = NodePath("../Armature_001/Skeleton3D/character mesh")
 
 [node name="Armature_001" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player6/main character2"]
-transform = Transform3D(-0.02526976, 0, -0.9996807, 0, 1, 0, 0.9996807, 0, -0.02526976, -0.71730769, 1.83590961, -3.38341761)
+transform = Transform3D(0.581729, 0, -0.81338268, 0, 1, 0, 0.81338268, 0, 0.581729, -0.29884806, 2.045, -4.6102776)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player6/main character2/Armature_001"]
 bones/0/name = "hips"
@@ -3448,13 +3453,18 @@ libraries = {
 autoplay = "lobby_scene_pose_1"
 
 [node name="player nametag" type="Label3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player6/main character2"]
-transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, -0.92229295, 4.39229441, -2.27971029)
+transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, 0.20173858, 4.0013847, -3.6060129)
 billboard = 1
 modulate = Color(1, 1, 1, 0.20392157)
 outline_modulate = Color(0, 0, 0, 0.54901963)
 font = ExtResource("47")
 font_size = 87
 outline_size = 16
+
+[node name="chair_MOD6" type="MeshInstance3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player6/main character2/Armature_001"]
+transform = Transform3D(-0.097100837, 0, -0.99527455, 0, 1, 0, 0.99527455, 0, -0.097100837, 2.1232914, -1.2150999, 0.057420674)
+mesh = SubResource("ArrayMesh_hy16q")
+skeleton = NodePath("")
 
 [node name="Player7" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
@@ -3469,7 +3479,7 @@ texture_eye_closed = ExtResource("15")
 character_mesh = NodePath("../Armature_001/Skeleton3D/character mesh")
 
 [node name="Armature_001" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player7/main character2"]
-transform = Transform3D(-0.41390452, 0, -0.91032034, 0, 1, 0, 0.91032034, 0, -0.41390452, 2.52414346, 2.28170681, -7.23729563)
+transform = Transform3D(-0.75958649, 0, -0.65040631, 0, 1, 0, 0.65040631, 0, -0.75958649, -1.5602023, 2.045, -7.6872124)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player7/main character2/Armature_001"]
 bones/0/name = "hips"
@@ -3725,13 +3735,18 @@ libraries = {
 autoplay = "lobby_scene_pose_1"
 
 [node name="player nametag" type="Label3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player7/main character2"]
-transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, 1.12922239, 4.74309111, -5.7642355)
+transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, -2.5170165, 4.0013847, -7.1010032)
 billboard = 1
 modulate = Color(1, 1, 1, 0.20392157)
 outline_modulate = Color(0, 0, 0, 0.54901963)
 font = ExtResource("47")
 font_size = 87
 outline_size = 16
+
+[node name="chair_MOD7" type="MeshInstance3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player7/main character2/Armature_001"]
+transform = Transform3D(-0.097100837, 0, -0.99527455, 0, 1, 0, 0.99527455, 0, -0.097100837, 2.1232914, -1.2150999, 0.057420674)
+mesh = SubResource("ArrayMesh_hy16q")
+skeleton = NodePath("")
 
 [node name="Player8" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
@@ -3746,7 +3761,7 @@ texture_eye_closed = ExtResource("15")
 character_mesh = NodePath("../Armature_001/Skeleton3D/character mesh")
 
 [node name="Armature_001" type="Node3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player8/main character2"]
-transform = Transform3D(-0.81274492, 0, -0.58261967, 0, 1, 0, 0.58261967, 0, -0.81274492, 4.56336784, 2.21354961, -4.2597537)
+transform = Transform3D(0.82483971, 0, -0.56536666, 0, 1, 0, 0.56536666, 0, 0.82483971, 9.5707162, 2.045, -8.297626)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player8/main character2/Armature_001"]
 bones/0/name = "hips"
@@ -4002,13 +4017,18 @@ libraries = {
 autoplay = "lobby_scene_pose_1"
 
 [node name="player nametag" type="Label3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player8/main character2"]
-transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, 3.06651592, 5.38383245, -2.11073136)
+transform = Transform3D(0.895, 0, 0, 0, 1, 0, 0, 0, 1, 10.384593, 4.0013847, -7.5251366)
 billboard = 1
 modulate = Color(1, 1, 1, 0.20392157)
 outline_modulate = Color(0, 0, 0, 0.54901963)
 font = ExtResource("47")
 font_size = 87
 outline_size = 16
+
+[node name="chair_MOD8" type="MeshInstance3D" parent="LobbyPreviewViewport/LobbyViewport/Players/Player8/main character2/Armature_001"]
+transform = Transform3D(-0.097100837, 0, -0.99527455, 0, 1, 0, 0.99527455, 0, -0.097100837, 2.1232914, -1.2150999, 0.057420674)
+mesh = SubResource("ArrayMesh_hy16q")
+skeleton = NodePath("")
 
 [node name="OmniLight3D" type="OmniLight3D" parent="LobbyPreviewViewport/LobbyViewport"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.199182, 5.4528155)

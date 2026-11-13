@@ -122,17 +122,46 @@ Note `counter += 1` sits *inside* the `connected_players.has(...)` check, so an
 instance that does not know a peer skips it silently. That masks the crash on
 clients and is why the bug is easy to miss.
 
-**Where players 5-8 sit (since 2026-08-16, issue #14): on the laps of 1-4.**
-The room has only four upright, visible chairs, each with a seat baked into
-its preview's `Armature_001` transform (the `PlayerN` nodes at x = −6, −2, 2,
-6 are an authoring row, not seats — a lesson that cost a real lobby, pitfall
-35). `Player5`-`Player8` therefore keep their host's `PlayerN` x and carry
-their own hand-placed `Armature_001` + `player nametag` transforms putting
-them on `Player1`-`Player4`'s laps respectively, all in `lobby_scene_pose_1`.
-The script never touches a preview transform: the vanilla handler leaves
-slots 5-8 invisible at ≤4, so rule 3 holds with no restore branch. To move a
-seat, do it in the running game with `tools/lobby_preview/` (Testing,
-"Placing the lobby previews") and paste the printed lines — never re-run
+**Where players 5-8 sit (since 2026-11-13): on a chair of their own.** From
+2026-08-16 (issue #14) they sat on the laps of 1-4, because the room has only
+four upright, visible chairs; players reported it as people "sitting on other
+players". Each seat lives in its preview's `Armature_001` transform (the
+`PlayerN` nodes at x = −6, −2, 2, 6 are an authoring row, not seats — a lesson
+that cost a real lobby, pitfall 35).
+
+Each of `Player5`-`Player8` is now a **rigid copy of vanilla seat 2** —
+`Player2` sitting on `chair_001` in `lobby_scene_pose_1`, the pose slots 5-8
+already played — moved to a new chair spot: `Armature_001` =
+`new chair · chair_001⁻¹ · Player2's armature`, and the nametag moved by the
+same motion. Every upright chair in the room shares one mesh (identical AABB
+and vertex count), so the body lands on its new chair exactly as Player2 sits
+on `chair_001`; the method reproduces Player2's own baked transform to 3e-16 when
+handed `chair_001`'s spot. The chair itself is a `chair_MOD5`-`chair_MOD8`
+node (the shared `chair_001` mesh) **under the slot's `Armature_001`**, with
+one constant local transform. That placement does two jobs: the vanilla
+handler shows and hides the whole `PlayerN` slot, so the chair appears only
+while its seat is taken (rule 3 holds with no script, as before), and moving a
+sitter with `tools/lobby_preview/` carries its chair along.
+
+| Slot | Chair (x, z, yaw) | Where |
+|---|---|---|
+| 5 | 2.20, −0.10, −15° | back, right of centre |
+| 6 | −2.90, 2.90, +30° | between Player1 and Player2 |
+| 7 | 5.20, 6.40, −55° | front right |
+| 8 | −5.30, 7.10, +50° | front left |
+
+The order alternates sides so five, six and seven players still look
+balanced. Spots were chosen offline against the camera (all in frame, hips at
+least 2.3 u from any other seat, wall clear by 1.2 u or more), then **looked at
+in the running game on 2026-11-13**: the maintainer hosted a Steam lobby in the
+`tools/lobby_preview/` build with all eight slots forced visible, and the
+game's own frame showed every player on a chair of their own, every nametag
+above its sitter, nobody on anybody, and P5's legs behind P3 from the camera
+as the only overlap. Slots 5-8 have still never been filled by real joiners
+(open item 3). The toppled chair at the front right (`chair_012`) is vanilla
+set dressing and was left in place, next to P7. To move a seat, do it in the running game with
+`tools/lobby_preview/` (Testing, "Placing the lobby previews") and paste the
+printed lines; F10 (auto-place on a lap) no longer applies. Never re-run
 `lobby_expand.py` on this scene, it would overwrite the seats.
 
 ### 7. Lobby roster (new file)
