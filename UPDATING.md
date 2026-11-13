@@ -596,7 +596,7 @@ see step 5 of the update procedure. The "§" column is the section of
 
 | File | § | Change |
 |---|---|---|
-| `autoloads/globals.gd` | 2, 24 | version strings (display + the two wire fields), 3 suit colours + tints, player caps, `supports_player_count()`, round counts, **`mod_roster_scored_minigames` + `mod_score_scale()` + `mod_share_tied_placements()`**. `default_playlist` is byte-identical to vanilla again since 2026-08-09 |
+| `autoloads/globals.gd` | 2, 24, 27 | version strings (display + the two wire fields), 3 suit colours + tints, player caps, `supports_player_count()`, round counts, **`mod_roster_scored_minigames` + `mod_score_scale()` + `mod_share_tied_placements()`**, **`mod_points_page()`** (the briefing's POINTS text). `default_playlist` is byte-identical to vanilla again since 2026-08-09 |
 | `modules/multiplayer/network_manager.gd` | 1 | `MAX_PLAYERS` 4→8; `-localtest` backend; `mod_all_peers_modded()` |
 | `modules/multiplayer/backends/steam_backend.gd`, `backends/enet_backend.gd` | — | **vanilla-compat handshake**: wire version + `mod8p` capability key, vanilla-peer accept, over-cap refusal and spectator demotion. See the archived 2026-08-09 session-log entry |
 | `scenes/local_game/script/local_game.gd` | — | couch mode's own playlist generator — the **unconditional** cutscene filter (no vanilla peers by definition); see "The first sanctioned exception" |
@@ -608,9 +608,9 @@ see step 5 of the update procedure. The "§" column is the section of
 | `modules/multiplayer_lobby/multiplayer_menu.gd` | 6, 8 | debug-lobby seat map, window tiling, `-original` |
 | `modules/multiplayer_lobby/mod_player_name_list.gd` | 7 | **the only file the mod adds** |
 | `modules/multiplayer/backends/multiplayer_backend.gd` | 8 | window titles P1-P8 |
-| `minigames/intermission_new/components/intermission_score_screen.gd` | 11 | one row per player up to 8; reverb pitch clamp |
+| `minigames/intermission_new/components/intermission_score_screen.gd` | 11, 27 | one row per player up to 8; **"+points place" tag per row above four**; reverb pitch clamp |
 | `minigames/intermission_new/components/intermission_session_end.gd` | 25 | **joined 2026-11-09**: final ranking walks ranks 1-8 instead of 1-4; more than three names packed into the screen's three rows (four would crash it) |
-| `minigames/intermission_new/components/intermission_briefing_screen.gd` | 12 | 8 cards; `FLOW=1` auto-ready |
+| `minigames/intermission_new/components/intermission_briefing_screen.gd` | 12, 27 | 8 cards; **POINTS page above four**; `FLOW=1` auto-ready |
 | `minigames/chisel_gauntlet_multiplayer/*` (4) | 5, 10, 23 | 8 stations, facings, shotgun order, jumbotron HUD overlay above four, split-screen; the `.tscn` adds 4 identity spectate markers (pitfall 31) |
 | `minigames/escalator_pit/*` (3) | 13, 23 | 8 stair strips, hidden handrails |
 | `minigames/smoke_break/*` (4) | 14, 23 | 8 seats, crates, aim angles, 4 capped arrays |

@@ -37,6 +37,64 @@ const MOD_USER_INFO: PackedScene = preload("res://minigames/intermission_new/com
 
 var mod_vanilla_containers: Array[Intermission_UserContainer] = []
 var mod_extra_containers: Array[Intermission_UserContainer] = []
+var mod_expanded: bool = false
+
+# Above four players each row also says what that player earned in the
+# minigame just played and where that placed them in it - "+255 2nd" - because
+# the board otherwise shows only running totals, and at 5-8 players nobody
+# could tell why they got what they got (MINIGAMES.md section 27). The tag is
+# a clone of the row's own score label, so it shares its font, size and scale,
+# and as a child of the row it moves with every rank swap and hides with the
+# row. It is created on first use above four players, so a 1-4 board never
+# has one.
+const MOD_GAIN_NODE: StringName = &"mod gain"
+# Gap between the widest name on the board and the tags, in row units.
+const MOD_GAIN_GAP: float = 0.35
+
+func _mod_gain_label(uc: Intermission_UserContainer) -> Label3D:
+	var existing: Node = uc.get_node_or_null(NodePath(MOD_GAIN_NODE))
+	if existing is Label3D:
+		return existing
+	var label: Label3D = uc.label_score.duplicate() as Label3D
+	label.name = MOD_GAIN_NODE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	uc.add_child(label)
+	return label
+
+func _mod_label_width(label: Label3D, text: String) -> float:
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	return (font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+		* label.pixel_size * label.scale.x)
+
+func _mod_show_gains(game_scores: Dictionary) -> void:
+	for uc in mod_vanilla_containers + mod_extra_containers:
+		var old: Node = uc.get_node_or_null(NodePath(MOD_GAIN_NODE))
+		if old != null:
+			old.visible = false
+	if not mod_expanded:
+		return
+
+	# One column for the whole board, just past its widest name.
+	var tag_x: float = 0.0
+	for uc in user_container_array:
+		if uc.container_active:
+			tag_x = maxf(tag_x, uc.label_name.position.x
+				+ _mod_label_width(uc.label_name, uc.label_name.text))
+	tag_x += MOD_GAIN_GAP
+
+	for uc in user_container_array:
+		if not uc.container_active:
+			continue
+		var gain: int = game_scores.get(uc.user_network_id, 0)
+		# Ties share the better place: 1st, 2nd, 2nd, 4th.
+		var place: int = 1
+		for other in game_scores.values():
+			if other > gain:
+				place += 1
+		var label: Label3D = _mod_gain_label(uc)
+		label.text = "+%d %s" % [gain, Globals.mod_ordinal(place)]
+		label.position.x = tag_x
+		label.visible = true
 
 func _mod_build_extra_containers() -> void:
 	if not mod_extra_containers.is_empty():
@@ -109,6 +167,7 @@ func _mod_set_capacity(player_count: int) -> void:
 
 	rank_y_positions = ys
 	user_container_array = active
+	mod_expanded = expand
 
 	var row_scale: float = _mod_row_scale(rows) if expand else 1.0
 	for uc in active:
@@ -223,6 +282,8 @@ func reset_user_containers(
 	score_container_nodes.clear()
 	for i in user_container_array.size():
 		score_container_nodes.append(user_container_array[i])
+
+	_mod_show_gains(_game_score_by_network_id)
 
 
 func check_to_show_score():

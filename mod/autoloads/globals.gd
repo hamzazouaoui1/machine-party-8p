@@ -453,6 +453,115 @@ func mod_share_tied_placements(scores: Dictionary, dead_players: Array, death_ms
 			scores[dead_players[index]] = group_end
 		group_start = group_end + 1
 
+# 8-PLAYER MOD: a "POINTS" page at the end of every minigame's briefing, above
+# four players only (rule 3: a 1-4 briefing gets no extra page). Players at 5-8
+# could not tell why they got what they got, so this spells out each
+# minigame's payout at this lobby size, in session points. MINIGAMES.md
+# section 27.
+#
+# Every number here is derived, not typed: `multiplier` is game.gd's
+# score_multiplier (passed in, so it lives in one place), the survival ladder
+# goes through mod_score_scale() exactly as game.gd's payout does, and the
+# per-event rules mirror the scoring lines in each minigame script - change
+# one of those and its line below has to change with it.
+const MOD_POINTS_HEADER: String = "POINTS"
+
+# Survival-ladder minigames whose simultaneous eliminations share a placement:
+# the five that call mod_share_tied_placements(), plus Chisel Gauntlet and The
+# Filter, which score a whole round's eliminations together. Forklift
+# Certified ranks every death on its own.
+const mod_shared_placement_minigames: Array[MinigameIdentifier] = [
+	MinigameIdentifier.DvdRoomba,
+	MinigameIdentifier.SpineBreaker,
+	MinigameIdentifier.DiscoDodge,
+	MinigameIdentifier.JunkPlatform,
+	MinigameIdentifier.TrainRace,
+	MinigameIdentifier.ChiselGauntlet,
+	MinigameIdentifier.BurnRecycle,
+]
+
+func mod_ordinal(place: int) -> String:
+	var suffix: String = "th"
+	if place % 100 < 11 or place % 100 > 13:
+		match place % 10:
+			1: suffix = "st"
+			2: suffix = "nd"
+			3: suffix = "rd"
+	return str(place) + suffix
+
+# What one raw point of `identifier` is worth in session points at this roster,
+# with game.gd's rounding.
+func _mod_points(identifier: MinigameIdentifier, raw: int, player_count: int, multiplier: int) -> int:
+	return roundi(raw * mod_score_scale(identifier, player_count) * multiplier)
+
+func mod_points_page(identifier: MinigameIdentifier, player_count: int, multiplier: int) -> String:
+
+	if player_count <= MOD_VANILLA_ROSTER:
+		return ""
+
+	var one: int = multiplier
+	var lines: PackedStringArray = ["Each round:"]
+
+	match identifier:
+		MinigameIdentifier.EscalatorPit:
+			# Reaching the top is paid through player_scored, unscaled; outliving
+			# a rival is +1 raw per fall to everyone still climbing, scaled.
+			var per_fall: int = _mod_points(identifier, 1, player_count, multiplier)
+			lines.append("Reach the top first: %d" % (2 * one))
+			lines.append("Reach the top: %d" % one)
+			lines.append("Each time someone falls,")
+			lines.append("everyone still climbing: +%d" % per_fall)
+			lines.append("Last one climbing: +%d" % per_fall)
+		MinigameIdentifier.ExplodingCollarRace:
+			lines.append("Reach halfway: %d" % one)
+			lines.append("Reach the van: %d" % one)
+			lines.append("First to the van: +%d" % one)
+			lines.append("No lives lost: +%d" % one)
+		MinigameIdentifier.GreenPea:
+			lines.append("Reach halfway: %d" % one)
+			lines.append("Finish: %d" % one)
+			lines.append("First to finish: +%d" % one)
+		MinigameIdentifier.ManufactureGun:
+			lines.append("Each gun you build: %d" % one)
+			lines.append("Each kill: %d" % one)
+			lines.append("Last one alive: %d" % one)
+		MinigameIdentifier.KnifeAtTheOffice:
+			lines.append("First to find the syringe: %d" % one)
+			lines.append("Each player you infect: %d" % one)
+			lines.append("Not infected at the end: %d" % one)
+		MinigameIdentifier.SmokeBreak:
+			lines.append("First to finish: %d" % (2 * one))
+			lines.append("2nd and 3rd to finish: %d" % one)
+			lines.append("Everyone else: 0")
+		MinigameIdentifier.DuckHunt:
+			lines.append("Ducks:")
+			lines.append("Reach the end: %d" % one)
+			lines.append("First to the end: +%d" % one)
+			lines.append("Hunter:")
+			lines.append("Each duck shot: %d" % one)
+			lines.append("Shoot every duck: +%d" % one)
+		_:
+			if not mod_roster_scored_minigames.has(identifier):
+				return ""
+			# Survival order: the k-th place finisher (k >= 2) holds raw
+			# player_count - k, the winner holds player_count.
+			lines.append("Placed by how long you last.")
+			var entries: PackedStringArray = []
+			for place in range(1, player_count + 1):
+				var raw: int = player_count if place == 1 else player_count - place
+				entries.append("%s %d" % [mod_ordinal(place), _mod_points(identifier, raw, player_count, multiplier)])
+			for i in range(0, entries.size(), 2):
+				if i + 1 < entries.size():
+					lines.append("%-10s%s" % [entries[i], entries[i + 1]])
+				else:
+					lines.append(entries[i])
+			lines.append("%s = first one out." % mod_ordinal(player_count))
+			if mod_shared_placement_minigames.has(identifier):
+				lines.append("Out at the same time:")
+				lines.append("same points.")
+
+	return "\n".join(lines)
+
 var default_settings: Dictionary = {
 	"master_volume": 0.2, 
 	"music_volume": 1.0, 

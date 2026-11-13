@@ -1915,3 +1915,50 @@ problem the mod can reach; the Mac player's renderer glitches, if they come
 from the translation layer, are outside it. The untried test that would
 settle the cause is his own log from a session, and whether capping his frame
 rate (`--max-fps 60` as a Steam launch option) changes what others see.
+
+### 27. How points work, shown in the game - `globals.gd`, `intermission_briefing_screen.gd`, `intermission_score_screen.gd`
+
+**Reported 2026-11-13:** "the players don't understand how the points are
+split, and why each player got what they got". The board showed a pot and
+running totals and nothing else, and §24's roster scaling made the numbers
+less guessable still. Two additions, both above four players only (rule 3: a
+1-4 briefing has no extra page and a 1-4 board no tag, because neither is ever
+created there).
+
+**A POINTS page closes every minigame's briefing.**
+`Globals.mod_points_page(identifier, roster, multiplier)` builds it and
+`set_briefing_screen_info()` appends it after the minigame's own pages, on
+every peer from the same roster, so no RPC. Every number is derived: the
+multiplier is `game.gd`'s `score_multiplier` passed in, the survival ladder
+goes through `mod_score_scale()` with `game.gd`'s rounding, and the
+per-event lines mirror the scoring code of each minigame - **change a
+minigame's scoring and its line here has to change with it**:
+
+| Minigame | What the page says (session points) | From |
+|---|---|---|
+| the eight survival-order minigames (§24's list minus Wrong Way) | a place ladder for this roster - at eight `1st 340, 2nd 255, 3rd 213, 4th 170, 5th 128, 6th 85, 7th 43, 8th 0`; "out at the same time: same points" for all but Forklift Certified, which ranks every death on its own | k-th place holds raw `roster - k`, the winner `roster`, scaled |
+| Wrong Way | top first 170, top 85 (unscaled, `player_scored`); +`340/roster` to everyone still climbing per fall, and to the last one climbing | `escalator_pit.gd` |
+| Minefield | halfway 85, the van 85, first to the van +85, no lives lost +85 | `exploding_collar_race.gd` |
+| Table Manners | halfway 85, finish 85, first to finish +85 | `green_pea.gd` |
+| Firearm Factory | each gun built 85, each kill 85, last one alive 85 | `manufacture_gun.gd` |
+| Inside Job | first to find the syringe 85, each player infected 85, not infected at the end 85 | `knife_at_the_office.gd` |
+| Smoke Break | first to finish 170, 2nd and 3rd 85, everyone else 0 | `smoke_break.gd`, `round_end_state.gd` |
+| Duck Hunt | ducks: the end 85, first there +85; hunter: each duck 85, every duck +85 | `duck_hunt.gd` |
+
+Every page opens "Each round:" because the payout repeats per round. The
+text is English only; the game's other briefing text goes through its
+translation tables, which the mod cannot extend.
+
+**Each score-screen row ends with what that player just earned and where it
+placed them** - `+255 2nd`, ties sharing the better place (`3rd, 3rd, 5th`).
+The tag is a duplicate of the row's own score label, so it shares its font,
+size and scale; as the row's child it moves with every rank swap and hides
+with the row. All tags share one column just past the widest name on the
+board, measured with the label's font.
+
+**Verified 2026-11-13** on a client of an eight-player FLOW run through The
+Filter, from the game's own rendered frames (a scratch-only capture build,
+never in `mod/`): the briefing showed `POINTS`, `Page 3/3`, the full ladder
+inside the panel; the score screen showed `+553 1st`, `+510 2nd`,
+`+383 3rd` twice, `+256 5th` twice, `+213 7th`, `+86 8th` beside the names,
+each sum a valid pair of the match payouts.

@@ -688,6 +688,16 @@ func set_briefing_screen_info(minigame_identifier: Globals.MinigameIdentifier):
 				keyboard_icons, controller_icons, control_data.control_text, control_data.controller_text
 			)
 
+	# 8P MOD: above four players one more page follows the minigame's own: how
+	# its points work at this lobby size (Globals.mod_points_page,
+	# MINIGAMES.md section 27). Every peer runs this with the same roster, so
+	# no RPC is needed; at 1-4 the page text is empty and nothing is added.
+	var mod_points: String = Globals.mod_points_page(minigame_identifier,
+		PlayerManager.player_presences.size(), intermission_manager.game.score_multiplier)
+	if not mod_points.is_empty():
+		brief_header_contents.append(Globals.MOD_POINTS_HEADER)
+		brief_page_contents.append(mod_points)
+
 	active_pages_headers = brief_header_contents
 	active_pages_content = brief_page_contents
 	active_page_index = 0

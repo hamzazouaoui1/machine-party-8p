@@ -113,6 +113,10 @@ WHAT CHANGED
   winner, evenly spaced in between. They used to pay by lobby size, so a win
   was worth 680 at eight players and dying fifth beat winning Table Manners.
   Players eliminated at the same instant now score the same.
+- HOW POINTS WORK, in lobbies of 5-8: every minigame's briefing ends with a
+  POINTS page saying what everything is worth at that lobby size, and after
+  each minigame the score screen shows next to every player what they just
+  earned and where they placed, e.g. "+255 2nd". The text is English only.
 - The end-of-session results screen lists everyone. It used to drop whoever
   finished fifth or lower.
 - In lobbies of 5-8, each player's position updates are limited to about 60 a
